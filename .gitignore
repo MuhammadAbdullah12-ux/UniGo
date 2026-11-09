@@ -1,0 +1,21 @@
+# Python virtual environments and compiled bytecode
+venv/
+__pycache__/
+*.py[cod]
+
+# Local environment configuration file (holds sensitive connection credentials)
+.env
+
+# Node.js dependencies and production builds
+node_modules/
+dist/
+
+# Uploaded student fee receipts (preserves the directory structure via .gitkeep)
+backend/app/uploads/receipts/*
+!backend/app/uploads/receipts/.gitkeep
+
+# Editor workspace settings and system caches
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
