@@ -93,7 +93,7 @@ class RouteBase(BaseModel):
     name: str = Field(..., description="Descriptive route title (e.g., Faisalabad - Chiniot)")
     pickup_points: Optional[str] = Field(None, description="Listing of scheduled stops")
     fee_amount: float = Field(..., gt=0, description="Base semester transport fee for full commute")
-    seats_total: int = Field(default=50, gt=0, description="Vehicle maximum seating capacity")
+    seats_total: int = Field(default=55, gt=0, description="Vehicle maximum seating capacity")
     is_active: bool = Field(default=True, description="Route availability status")
 
 
@@ -130,7 +130,7 @@ class RouteOut(RouteBase):
 class RegistrationCreate(BaseModel):
     """
     Payload submitted by students when selecting a bus route.
-    Used by: POST /registrations (app/routers/routes.py)
+    Used by: POST /registrations (app/routers/fees.py)
     """
     route_id: int
     trip_type: str = Field(default="two_way", description="'one_way' or 'two_way'")
@@ -148,7 +148,7 @@ class RegistrationCreate(BaseModel):
 class FeeOut(BaseModel):
     """
     Ledger record representation showing fee status, payable amounts, and rejection feedback.
-    Used by: GET /fees/my (app/routers/fees.py)
+    Used by: GET /fees/my, POST /registrations (app/routers/fees.py)
     """
     model_config = ConfigDict(from_attributes=True)
 
@@ -162,10 +162,28 @@ class FeeOut(BaseModel):
     last_reject_reason: Optional[str] = None
 
 
+# ==============================================================================
+# Fee Receipt & Verification Schemas (Day 8 & Week 2)
+# ==============================================================================
+
+class FeeReceiptOut(BaseModel):
+    """
+    Representation returned to student upon successful challan PDF submission.
+    Used by: POST /fees/{fee_id}/receipt (app/routers/fees.py)
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    fee_id: int
+    original_name: str
+    uploaded_at: datetime
+    status: str
+    reject_reason: Optional[str] = None
+
+
 class RejectReceiptIn(BaseModel):
     """
     Mandatory reason payload submitted by Accounts Officers when rejecting a fee slip.
     Used by: POST /accounts/receipts/{id}/reject (app/routers/accounts.py)
     """
     reason: str = Field(..., min_length=3, description="Formal explanation detailing why the slip was rejected")
-
