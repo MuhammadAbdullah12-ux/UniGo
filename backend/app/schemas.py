@@ -1,0 +1,171 @@
+"""
+Pydantic schemas for request validation, data serialization, and response formatting.
+Defines the data transfer contracts between the frontend client and the FastAPI backend,
+ensuring strict validation of incoming payloads and filtering sensitive fields on responses.
+"""
+
+import re
+from datetime import datetime
+from typing import Optional, List
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
+
+
+# ==============================================================================
+# Authentication & User Schemas
+# ==============================================================================
+
+class UserRegister(BaseModel):
+    """
+    Validation schema for student registration requests.
+    Used by: POST /auth/register (app/routers/auth.py)
+    """
+    reg_no: str = Field(..., description="Student registration identifier (e.g., 23F-0509)")
+    full_name: str = Field(..., min_length=2, max_length=100, description="Full legal name")
+    email: EmailStr = Field(..., description="Valid institutional or personal email address")
+    password: str = Field(..., min_length=8, description="Account password (minimum 8 characters)")
+    student_type: str = Field(default="day_scholar", description="'hostelite' or 'day_scholar'")
+    phone: Optional[str] = Field(None, description="Contact phone number")
+
+    @field_validator("reg_no")
+    @classmethod
+    def validate_registration_number(cls, value: str) -> str:
+        """Enforces standardized university registration number patterns."""
+        normalized = value.strip().upper()
+        # Matches patterns like 23F-0509 or 21-CS-1234
+        if not re.match(r"^\d{2}[A-Z]{1,3}-\d{3,5}$", normalized):
+            raise ValueError("Registration number must follow standard format (e.g., 23F-0509)")
+        return normalized
+
+    @field_validator("student_type")
+    @classmethod
+    def validate_student_type(cls, value: str) -> str:
+        """Restricts student residence categorization to recognized values."""
+        normalized = value.strip().lower()
+        if normalized not in ["hostelite", "day_scholar"]:
+            raise ValueError("student_type must be either 'hostelite' or 'day_scholar'")
+        return normalized
+
+
+class UserLogin(BaseModel):
+    """
+    Credentials schema for authentication requests.
+    Accepts either an email address or student registration number.
+    Used by: POST /auth/login (app/routers/auth.py)
+    """
+    identifier: str = Field(..., description="Registered email address or student registration number")
+    password: str = Field(..., description="Account password")
+
+
+class UserOut(BaseModel):
+    """
+    Public user representation serialized for client responses.
+    Excludes sensitive attributes such as password_hash.
+    Used by: GET /auth/me, POST /auth/register, and user profile endpoints
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    reg_no: Optional[str] = None
+    full_name: str
+    email: str
+    role: str
+    student_type: Optional[str] = None
+    phone: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class TokenResponse(BaseModel):
+    """
+    Authentication token payload returned upon successful login.
+    Used by: POST /auth/login (app/routers/auth.py)
+    """
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOut
+
+
+# ==============================================================================
+# Transport Route Schemas
+# ==============================================================================
+
+class RouteBase(BaseModel):
+    """Common route attributes shared across creation and presentation schemas."""
+    name: str = Field(..., description="Descriptive route title (e.g., Faisalabad - Chiniot)")
+    pickup_points: Optional[str] = Field(None, description="Listing of scheduled stops")
+    fee_amount: float = Field(..., gt=0, description="Base semester transport fee for full commute")
+    seats_total: int = Field(default=50, gt=0, description="Vehicle maximum seating capacity")
+    is_active: bool = Field(default=True, description="Route availability status")
+
+
+class RouteCreate(RouteBase):
+    """Payload schema for administrative route creation."""
+    pass
+
+
+class RouteUpdate(BaseModel):
+    """Payload schema for administrative route modifications (all fields optional)."""
+    name: Optional[str] = None
+    pickup_points: Optional[str] = None
+    fee_amount: Optional[float] = Field(None, gt=0)
+    seats_total: Optional[int] = Field(None, gt=0)
+    is_active: Optional[bool] = None
+
+
+class RouteOut(RouteBase):
+    """
+    Route representation returned to student and administration portals.
+    Includes calculated real-time seat occupancy counts.
+    Used by: GET /routes, POST /routes, and PUT /routes/{id}
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    seats_taken: int = Field(default=0, description="Number of currently confirmed student registrations")
+
+
+# ==============================================================================
+# Route Registration & Fee Schemas
+# ==============================================================================
+
+class RegistrationCreate(BaseModel):
+    """
+    Payload submitted by students when selecting a bus route.
+    Used by: POST /registrations (app/routers/routes.py)
+    """
+    route_id: int
+    trip_type: str = Field(default="two_way", description="'one_way' or 'two_way'")
+    semester: str = Field(default="Fall 2026", description="Academic semester label")
+
+    @field_validator("trip_type")
+    @classmethod
+    def validate_trip_type(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in ["one_way", "two_way"]:
+            raise ValueError("trip_type must be either 'one_way' or 'two_way'")
+        return normalized
+
+
+class FeeOut(BaseModel):
+    """
+    Ledger record representation showing fee status, payable amounts, and rejection feedback.
+    Used by: GET /fees/my (app/routers/fees.py)
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    amount: float
+    due_date: Optional[datetime] = None
+    status: str
+    route_name: Optional[str] = None
+    trip_type: Optional[str] = None
+    semester: Optional[str] = None
+    last_reject_reason: Optional[str] = None
+
+
+class RejectReceiptIn(BaseModel):
+    """
+    Mandatory reason payload submitted by Accounts Officers when rejecting a fee slip.
+    Used by: POST /accounts/receipts/{id}/reject (app/routers/accounts.py)
+    """
+    reason: str = Field(..., min_length=3, description="Formal explanation detailing why the slip was rejected")
+
