@@ -31,7 +31,6 @@ class UserRegister(BaseModel):
     def validate_registration_number(cls, value: str) -> str:
         """Enforces standardized university registration number patterns."""
         normalized = value.strip().upper()
-        # Matches patterns like 23F-0509 or 21-CS-1234
         if not re.match(r"^\d{2}[A-Z]{1,3}-\d{3,5}$", normalized):
             raise ValueError("Registration number must follow standard format (e.g., 23F-0509)")
         return normalized
@@ -162,10 +161,6 @@ class FeeOut(BaseModel):
     last_reject_reason: Optional[str] = None
 
 
-# ==============================================================================
-# Fee Receipt & Verification Schemas (Day 8 & Week 2)
-# ==============================================================================
-
 class FeeReceiptOut(BaseModel):
     """
     Representation returned to student upon successful challan PDF submission.
@@ -187,3 +182,69 @@ class RejectReceiptIn(BaseModel):
     Used by: POST /accounts/receipts/{id}/reject (app/routers/accounts.py)
     """
     reason: str = Field(..., min_length=3, description="Formal explanation detailing why the slip was rejected")
+
+
+# ==============================================================================
+# Accounts Officer Schemas (Day 9 Review & Verification Queue)
+# ==============================================================================
+
+class AccountsStatsOut(BaseModel):
+    """
+    High-level financial and review metrics displayed on Accounts Officer dashboard.
+    Used by: GET /accounts/stats (app/routers/accounts.py)
+    """
+    pending_count: int = Field(default=0, description="Receipts currently waiting for officer verification")
+    approved_today_count: int = Field(default=0, description="Receipts verified and approved today")
+    rejected_count: int = Field(default=0, description="Receipts rejected requiring correction")
+    total_collected_amount: float = Field(default=0.0, description="Total verified transport fee amount collected in PKR")
+
+
+class ReceiptListItemOut(BaseModel):
+    """
+    Summary row schema for the pending and historical receipt review tables.
+    Used by: GET /accounts/receipts (app/routers/accounts.py)
+    """
+    id: int
+    fee_id: int
+    student_name: str
+    student_reg_no: Optional[str] = None
+    route_name: str
+    amount: float
+    uploaded_at: datetime
+    status: str
+    is_late: bool = Field(default=False, description="True if uploaded after voucher due date")
+
+
+class ReceiptDetailOut(BaseModel):
+    """
+    Detailed dossier populating the right-hand inspection panel of the Verify Receipt screen.
+    Used by: GET /accounts/receipts/{id} (app/routers/accounts.py)
+    """
+    id: int
+    fee_id: int
+    student_id: int
+    student_name: str
+    student_reg_no: Optional[str] = None
+    student_type: Optional[str] = None
+    student_email: str
+    student_phone: Optional[str] = None
+    route_name: str
+    trip_type: str
+    semester: str
+    amount: float
+    due_date: Optional[datetime] = None
+    uploaded_at: datetime
+    status: str
+    original_name: str
+    reject_reason: Optional[str] = None
+    is_late: bool = Field(default=False, description="True if uploaded after voucher due date")
+
+
+class StudentFeeHistoryOut(BaseModel):
+    """
+    Complete financial audit timeline for an individual student.
+    Used by: GET /accounts/students/{user_id} (app/routers/accounts.py)
+    """
+    student: UserOut
+    fee: Optional[FeeOut] = None
+    receipts: List[FeeReceiptOut] = []
