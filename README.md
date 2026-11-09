@@ -148,13 +148,4 @@ The PostgreSQL database (`unigo`) contains 6 interrelated tables designed to sup
 
    - **Frontend Application:** [http://localhost:5173/](http://localhost:5173/)
 
----
-
-## Upcoming Implementation Roadmap
-
-- **Week 1 (Days 2–3):** Authentication system (Bcrypt hashing, JWT generation, role authorization middleware, registration & login endpoints).
-- **Week 1 (Days 4–5):** Route administration, initial database seeding, and student route registration with automated fee creation.
-- **Week 1 (Day 6):** React authentication state management and role-based route guards.
-- **Week 2:** PDF challan upload with file validation, Accounts Officer verification dashboard, and notification triggers.
-- **Week 3:** Admin & Accounts portal user interfaces, reporting, and defense preparation.
 
