@@ -2,13 +2,14 @@
 Application entry point for the UniGo FastAPI backend.
 Initializes the application instance, establishes database tables on startup,
 configures Cross-Origin Resource Sharing (CORS) for the frontend client,
-and registers API route handlers.
+and registers modular API route handlers.
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 import app.models  # Imports model definitions so SQLAlchemy registers them with metadata
+from app.routers import auth, routes, fees  # Import modular domain routers
 
 # Synchronize models with PostgreSQL: creates any missing tables when the application starts
 Base.metadata.create_all(bind=engine)
@@ -34,7 +35,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ==============================================================================
+# Router Registrations
+# ==============================================================================
+# Mount authentication endpoints: /auth/register, /auth/login, /auth/me
+app.include_router(auth.router)
 
+# Mount transport route endpoints: GET /routes, GET /routes/{id}, POST /routes
+app.include_router(routes.router)
+
+# Mount student registration & fee voucher endpoints: POST /registrations, GET /fees/my
+app.include_router(fees.router)
+
+
+# ==============================================================================
+# General & Health Check Endpoints
+# ==============================================================================
 @app.get("/", tags=["General"])
 def root():
     """Root endpoint providing quick navigation links to API documentation and system status."""

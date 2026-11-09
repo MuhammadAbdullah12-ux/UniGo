@@ -1,36 +1,65 @@
-# UniGo — Campus Transport Management System
+# UniGo — Campus Transport & Fee Management System
 
-UniGo is a web-based transport and fee management platform designed for university campuses. It streamlines student transport registration, route administration, challan fee tracking, and accounts verification through three distinct role-based portals: **Student**, **Accounts Officer**, and **Transport Admin**.
+UniGo is a web-based transport and fee verification platform designed for university campuses (modeled on FAST-NUCES Chiniot-Faisalabad Campus operations). It automates student route registration, context-aware transport billing, challan verification, and administrative fleet management across three distinct role-based portals: **Student**, **Accounts Officer**, and **Transport Admin**.
 
 ---
 
-## Current Development Milestone: Mid-Evaluation (~40% Completion)
+## Current Development Milestone: Week 1 Complete (~40% Foundation)
 
-This repository contains the completed **Day 0 (Environment & Architecture Setup)** and **Day 1 (Database Connection, ORM Modeling, and Server Initialization)** implementation.
+All planned objectives for **Week 1 (Days 0 through 6)** have been implemented, tested, and verified end-to-end.
 
-### Completed Objectives:
-- [x] Initialized project repository structure with version control configuration (`.gitignore`).
-- [x] Configured Python virtual environment and installed backend dependencies.
-- [x] Initialized frontend React application via Vite and configured client libraries (`axios`, `react-router-dom`, `lucide-react`).
-- [x] Configured PostgreSQL database connection using SQLAlchemy ORM with connection pooling (`pool_pre_ping`).
-- [x] Implemented relational schema models for all 6 core entities with foreign keys and cascade rules.
-- [x] Auto-generated and verified all 6 tables in the PostgreSQL database.
-- [x] Configured FastAPI application with Cross-Origin Resource Sharing (CORS) for frontend client access.
-- [x] Verified API status and server availability via health check endpoints.
+### Completed Feature Set:
+- [x] **Relational Schema Architecture:** 6 core PostgreSQL tables configured via SQLAlchemy ORM (`users`, `routes`, `registrations`, `fees`, `fee_receipts`, `notifications`).
+- [x] **Cryptographic Security Engine:** Bcrypt password salting/hashing and signed JSON Web Tokens (JWT) with 8-hour expiration.
+- [x] **Role-Based Access Control (RBAC):** Request-level security dependencies enforcing access permissions across `student`, `accounts`, and `admin` roles.
+- [x] **Official Transport Fleet:** Seeded with 13 official FAST-NUCES campus routes, scheduled pickup stops, vehicle capacity (55 seats), and base semester fare (Rs. 36,000).
+- [x] **Context-Aware Billing Engine:**
+  - **Day Scholars:** Enforced full-semester two-way commute (Rs. 36,000). One-way passes restricted.
+  - **Hostelites:** Weekend home-travel ticketing (Rs. 500 one-way / Rs. 1,000 two-way).
+  - Automated generation of `unpaid` fee ledger records with a 14-day payment due date.
+- [x] **React Single-Page Client (Vite):**
+  - Centralized Axios client with automatic JWT bearer token injection via request interceptors and auto-logout on session expiration.
+  - Global `AuthContext` state provider with browser `localStorage` persistence.
+  - Client-side `ProtectedRoute` guards preventing unauthorized navigation across role boundaries.
+  - Universal login form with automatic steering to `/student`, `/accounts`, or `/admin`.
+  - Student registration form with live university roll number and email format validation.
 
 ---
 
 ## Technology Stack
 
-| Layer | Technology | Purpose |
+| Layer | Technology | Description |
 |---|---|---|
 | **Frontend** | React 19 (Vite) | Single-Page Application client with fast hot module replacement |
-| **Routing & HTTP** | React Router DOM, Axios | Client-side routing and asynchronous API communication |
-| **Backend** | FastAPI (Python 3.14) | High-performance asynchronous REST API framework |
+| **Client Routing** | React Router DOM v7 | Declarative client-side routing and protected route wrappers |
+| **HTTP Client** | Axios | Network client with request and response interceptors |
+| **Backend API** | FastAPI (Python 3.14) | High-performance asynchronous REST API framework |
 | **Database** | PostgreSQL 18 | Relational database management system |
-| **ORM** | SQLAlchemy 2.0 | Object-Relational Mapping for database queries and transactions |
-| **Authentication** | PyJWT, Bcrypt | Token-based stateless authentication and password hashing |
-| **Server** | Uvicorn (ASGI) | Production-grade ASGI web server implementation |
+| **ORM** | SQLAlchemy 2.0 | Object-Relational Mapping for database queries and migrations |
+| **Authentication** | PyJWT & Bcrypt | Stateless token-based authentication and secure password hashing |
+| **Web Server** | Uvicorn (ASGI) | Production-grade ASGI web server |
+
+---
+
+## System Architecture
+
+```text
+                               ┌────────────────────────────────────────────────────────┐
+                               │                    FastAPI Backend                     │
+                               │                                                        │
+┌────────────────┐  REST / JWT │  ┌──────────────┐   ┌──────────────┐   ┌────────────┐  │
+│  React Client  │ ──────────► │  │ Auth Router  │   │ Route Router │   │ Fee Router │  │
+│  (Port 5173)   │ ◄────────── │  └──────┬───────┘   └──────┬───────┘   └─────┬──────┘  │
+└────────────────┘             │         │                  │                 │         │
+                               └─────────┼──────────────────┼─────────────────┼─────────┘
+                                         ▼                  ▼                 ▼
+                               ┌────────────────────────────────────────────────────────┐
+                               │                 PostgreSQL 18 (unigo)                  │
+                               │   [users] ──< [registrations] >── [routes]             │
+                               │                    │                                   │
+                               │                    └── [fees] ──< [fee_receipts]       │
+                               └────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -39,113 +68,76 @@ This repository contains the completed **Day 0 (Environment & Architecture Setup
 ```text
 UniGo/
 ├── .gitignore                      # Version control exclusion rules
-├── README.md                       # Project technical documentation
+├── README.md                       # Technical documentation and setup guide
 ├── backend/
-│   ├── .env                        # Local environment parameters (database URL, JWT secrets)
+│   ├── .env                        # Local environment variables (DB URL, JWT Secret)
 │   ├── requirements.txt            # Python dependencies manifest
-│   ├── venv/                       # Isolated Python virtual environment
+│   ├── seed.py                     # Database seeder (staff accounts + campus routes)
 │   └── app/
-│       ├── __init__.py             # Python package marker
-│       ├── database.py             # SQLAlchemy engine, session maker, and get_db dependency
-│       ├── models.py               # Database schemas (User, Route, Registration, Fee, FeeReceipt, Notification)
-│       ├── main.py                 # FastAPI application entry point, CORS config, and health check
-│       ├── routers/                # Modular API route controllers
-│       └── uploads/receipts/       # Local storage directory for student fee receipt PDFs
+│       ├── database.py             # SQLAlchemy engine, session maker, get_db dependency
+│       ├── models.py               # ORM schemas (User, Route, Registration, Fee, etc.)
+│       ├── schemas.py              # Pydantic validation and serialization models
+│       ├── security.py             # Bcrypt hashing and JWT generation/decoding
+│       ├── deps.py                 # Bearer token verification and require_role RBAC
+│       ├── main.py                 # FastAPI application entry point and CORS setup
+│       ├── routers/
+│       │   ├── auth.py             # Registration, login, and profile endpoints
+│       │   ├── routes.py           # Route listing, seat tracking, and route creation
+│       │   └── fees.py             # Route registration and fee voucher generation
+│       └── uploads/receipts/       # Storage directory for student fee receipts
 └── frontend/
-    ├── package.json                # Frontend package manifest and npm scripts
-    ├── vite.config.js              # Vite build and development configuration
-    ├── index.html                  # Single HTML page entry point
+    ├── package.json                # Frontend dependencies and npm scripts
+    ├── vite.config.js              # Vite bundler configuration
+    ├── index.html                  # HTML entry point
     └── src/
-        ├── main.jsx                # Application DOM mounting script
-        ├── App.jsx                 # Top-level React routing component
-        └── assets/                 # Static graphical resources
+        ├── main.jsx                # React DOM initialization
+        ├── App.jsx                 # Application routes and navigation tree
+        ├── index.css & App.css     # Base styling and university theme tokens
+        ├── api/
+        │   └── client.js           # Axios client with bearer interceptor
+        ├── context/
+        │   └── AuthContext.jsx     # Global authentication state and useAuth hook
+        ├── components/
+        │   └── ProtectedRoute.jsx  # Client-side RBAC route guard
+        └── pages/
+            ├── Login.jsx           # Universal login form with dynamic role routing
+            ├── Register.jsx        # Student registration form
+            ├── StudentDashboard.jsx# Student portal view
+            ├── AccountsDashboard.jsx# Accounts Officer portal view
+            └── AdminDashboard.jsx  # Transport Admin portal view
 ```
 
 ---
 
-## Database Architecture
+## Default Accounts for Testing
 
-The PostgreSQL database (`unigo`) contains 6 interrelated tables designed to support the complete route registration and fee verification lifecycle:
-
-```text
-[users] ──< [registrations] >── [routes]
-                 │
-                 └── [fees] ──< [fee_receipts] >── [users (verifier)]
-                          
-[users] ──< [notifications]
-```
-
-### Table Definitions:
-
-| Entity | Primary Table | Key Attributes | Description |
+| Role | Identifier / Email | Password | Assigned Portal |
 |---|---|---|---|
-| **Users** | `users` | `id`, `reg_no`, `full_name`, `email`, `password_hash`, `role`, `student_type`, `phone` | Stores system actors across three roles: `student`, `accounts`, and `admin`. |
-| **Routes** | `routes` | `id`, `name`, `pickup_points`, `fee_amount`, `seats_total`, `is_active` | Maintained by Transport Admins; stores route details, base fees, and vehicle capacity. |
-| **Registrations** | `registrations` | `id`, `user_id`, `route_id`, `trip_type`, `semester`, `created_at` | Associates a student with a chosen route for a specific academic semester. |
-| **Fees** | `fees` | `id`, `registration_id`, `amount`, `due_date`, `status` | Auto-generated payment ledger. Status flow: `unpaid` → `pending` → `paid` / `rejected`. |
-| **Fee Receipts** | `fee_receipts` | `id`, `fee_id`, `file_path`, `original_name`, `status`, `reject_reason`, `verified_by` | Tracks uploaded bank challan PDFs and accounts officer audit decisions. |
-| **Notifications** | `notifications` | `id`, `user_id`, `title`, `message`, `is_read`, `created_at` | Delivers in-app system updates regarding fee submissions, approvals, and rejection remarks. |
+| **Student (Day Scholar)** | `23F-0509` *(or email)* | `Password123` | `/student` |
+| **Student (Hostelite)** | `23F-0888` *(or email)* | `Password123` | `/student` |
+| **Accounts Officer** | `accounts@unigo.test` | `AccountsPassword123` | `/accounts` |
+| **Transport Admin** | `admin@unigo.test` | `AdminPassword123` | `/admin` |
 
 ---
 
-## Getting Started
+## How to Run the Application
 
-### Prerequisites
-- Python 3.10+
-- Node.js LTS (v20+ or v24+)
-- PostgreSQL 18 running locally on port `5432`
-
----
-
-### Backend Setup
-
-1. **Navigate to the backend directory and activate the virtual environment:**
-   ```powershell
-   cd backend
-   .\venv\Scripts\Activate.ps1
-   ```
-
-2. **Verify dependencies are installed:**
-   ```powershell
-   pip install -r requirements.txt
-   ```
-
-3. **Verify environment variables in `backend/.env`:**
-   ```env
-   DATABASE_URL=postgresql+psycopg2://postgres:admin123@localhost:5432/unigo
-   SECRET_KEY=unigo-mid-eval-super-secret-key-2026-change-in-prod
-   ALGORITHM=HS256
-   ACCESS_TOKEN_EXPIRE_MINUTES=480
-   ```
-
-4. **Start the FastAPI development server:**
-   ```powershell
-   uvicorn app.main:app --reload
-   ```
-
-   - **API Root:** [http://localhost:8000/](http://localhost:8000/)
-   - **Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
-   - **Interactive API Documentation (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+### 1. Start the Backend API Server
+Open a terminal in the root directory:
+```powershell
+cd backend
+.\venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload
+```
+- **API Base:** [http://localhost:8000](http://localhost:8000)
+- **Interactive Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-### Frontend Setup
-
-1. **Open a new terminal and navigate to the frontend directory:**
-   ```powershell
-   cd frontend
-   ```
-
-2. **Install frontend dependencies (if not already installed):**
-   ```powershell
-   npm install
-   ```
-
-3. **Start the Vite development server:**
-   ```powershell
-   npm run dev
-   ```
-
-   - **Frontend Application:** [http://localhost:5173/](http://localhost:5173/)
-
-
+### 2. Start the React Frontend Client
+Open a second terminal:
+```powershell
+cd frontend
+npm run dev
+```
+- **Web Application:** [http://localhost:5173](http://localhost:5173)
