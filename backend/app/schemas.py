@@ -181,7 +181,29 @@ class RejectReceiptIn(BaseModel):
     Mandatory reason payload submitted by Accounts Officers when rejecting a fee slip.
     Used by: POST /accounts/receipts/{id}/reject (app/routers/accounts.py)
     """
-    reason: str = Field(..., min_length=3, description="Formal explanation detailing why the slip was rejected")
+    reason: str = Field(..., min_length=3, max_length=500, description="Formal explanation detailing why the slip was rejected")
+
+    @field_validator("reason")
+    @classmethod
+    def validate_non_empty_reason(cls, value: str) -> str:
+        trimmed = value.strip()
+        if len(trimmed) < 3:
+            raise ValueError("Rejection reason must contain at least 3 non-whitespace characters")
+        return trimmed
+
+
+class ReceiptActionOut(BaseModel):
+    """
+    Confirmation response returned after an Accounts Officer approves or rejects a receipt.
+    Used by: POST /accounts/receipts/{id}/approve, POST /accounts/receipts/{id}/reject (app/routers/accounts.py)
+    """
+    success: bool = True
+    receipt_id: int
+    fee_id: int
+    status: str
+    message: str
+    verified_at: Optional[datetime] = None
+    reject_reason: Optional[str] = None
 
 
 # ==============================================================================

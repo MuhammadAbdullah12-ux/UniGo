@@ -23,7 +23,9 @@ from app.schemas import (
     StudentFeeHistoryOut,
     UserOut,
     FeeOut,
-    FeeReceiptOut
+    FeeReceiptOut,
+    RejectReceiptIn,
+    ReceiptActionOut
 )
 from app.deps import require_role
 
@@ -297,4 +299,121 @@ def get_student_fee_history(
         fee=fee_out,
         receipts=receipts_out
     )
+
+
+# ==============================================================================
+# 6. Approve Fee Receipt
+# ==============================================================================
+
+@router.post("/receipts/{id}/approve", response_model=ReceiptActionOut)
+def approve_receipt(
+    id: int,
+    db: Session = Depends(get_db),
+    current_officer: User = Depends(require_role("accounts", "admin"))
+):
+    """
+    Formally approves a student fee challan submission.
+    Transitions receipt status to 'approved', sets the linked fee status to 'paid',
+    and records the auditing officer's identity and verification timestamp.
+    Enforces idempotency: only 'pending' submissions can be approved.
+    """
+    receipt = db.query(FeeReceipt).filter(FeeReceipt.id == id).first()
+    if not receipt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Fee receipt record not found"
+        )
+
+    # State guard: ensure receipt has not already been finalized
+    if receipt.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Receipt cannot be approved because it has already been processed with status '{receipt.status}'"
+        )
+
+    now = datetime.now(timezone.utc)
+
+    # Update receipt audit fields
+    receipt.status = "approved"
+    receipt.verified_by = current_officer.id
+    receipt.verified_at = now
+    receipt.reject_reason = None
+
+    # Synchronize parent fee ledger record to 'paid'
+    fee = db.query(Fee).filter(Fee.id == receipt.fee_id).first()
+    if fee:
+        fee.status = "paid"
+
+    db.commit()
+    db.refresh(receipt)
+
+    return ReceiptActionOut(
+        success=True,
+        receipt_id=receipt.id,
+        fee_id=receipt.fee_id,
+        status="approved",
+        message="Fee receipt approved and transport voucher marked as paid.",
+        verified_at=receipt.verified_at,
+        reject_reason=None
+    )
+
+
+# ==============================================================================
+# 7. Reject Fee Receipt
+# ==============================================================================
+
+@router.post("/receipts/{id}/reject", response_model=ReceiptActionOut)
+def reject_receipt(
+    id: int,
+    payload: RejectReceiptIn,
+    db: Session = Depends(get_db),
+    current_officer: User = Depends(require_role("accounts", "admin"))
+):
+    """
+    Rejects a student fee challan with a mandatory written justification.
+    Transitions receipt status to 'rejected', stores the rejection feedback,
+    and resets the linked fee status to 'rejected' so the student can re-upload.
+    Enforces idempotency: only 'pending' submissions can be rejected.
+    """
+    receipt = db.query(FeeReceipt).filter(FeeReceipt.id == id).first()
+    if not receipt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Fee receipt record not found"
+        )
+
+    # State guard: ensure receipt has not already been finalized
+    if receipt.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Receipt cannot be rejected because it has already been processed with status '{receipt.status}'"
+        )
+
+    now = datetime.now(timezone.utc)
+
+    # Update receipt audit fields and save formal rejection reason
+    receipt.status = "rejected"
+    receipt.reject_reason = payload.reason
+    receipt.verified_by = current_officer.id
+    receipt.verified_at = now
+
+    # Synchronize parent fee ledger record to 'rejected'
+    # This unlocks the student's re-upload pipeline in fees.py
+    fee = db.query(Fee).filter(Fee.id == receipt.fee_id).first()
+    if fee:
+        fee.status = "rejected"
+
+    db.commit()
+    db.refresh(receipt)
+
+    return ReceiptActionOut(
+        success=True,
+        receipt_id=receipt.id,
+        fee_id=receipt.fee_id,
+        status="rejected",
+        message="Fee receipt rejected. Student has been flagged to upload a corrected challan.",
+        verified_at=receipt.verified_at,
+        reject_reason=receipt.reject_reason
+    )
+
 
