@@ -19,6 +19,9 @@ import {
   User,
   ShieldCheck,
   RefreshCw,
+  X,
+  FileText,
+  Eye,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import API from "../api/client";
@@ -33,6 +36,13 @@ export const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+  // In-App PDF Preview Modal State (IDM-Proof Embedded Viewer)
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfRendering, setPdfRendering] = useState(false);
+  const [pdfRenderError, setPdfRenderError] = useState(null);
 
   // Fetch the active transport fee voucher for the logged-in student
   const fetchMyFee = async () => {
@@ -56,11 +66,75 @@ export const StudentDashboard = () => {
     fetchMyFee();
   }, []);
 
-  const handleOpenReceiptFile = () => {
+  const handleOpenReceiptFile = async () => {
     if (!fee) return;
-    const token = localStorage.getItem("unigo_token");
-    // Open the PDF stream endpoint in a secure new browser tab
-    window.open(`http://localhost:8000/fees/${fee.id}/receipt/file?token=${token}`, "_blank");
+    setPdfModalOpen(true);
+    setPdfRendering(true);
+    setPdfRenderError(null);
+
+    try {
+      const res = await API.get(`/fees/${fee.id}/receipt/preview`);
+      const base64Data = res.data.base64;
+
+      const binaryString = window.atob(base64Data);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      if (!window.pdfjsLib) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+      const loadingTask = window.pdfjsLib.getDocument({ data: bytes });
+      const pdf = await loadingTask.promise;
+      const page = await pdf.getPage(1);
+
+      const unscaledViewport = page.getViewport({ scale: 1.0 });
+      const containerWidth = Math.min(840, window.innerWidth - 60);
+      const scale = (containerWidth / unscaledViewport.width) * 1.3;
+      const viewport = page.getViewport({ scale });
+
+      let canvas = document.getElementById("student-pdf-canvas");
+      for (let attempt = 0; attempt < 10 && !canvas; attempt++) {
+        await new Promise((r) => setTimeout(r, 50));
+        canvas = document.getElementById("student-pdf-canvas");
+      }
+      if (canvas) {
+        const context = canvas.getContext("2d");
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+        };
+        await page.render(renderContext).promise;
+      }
+    } catch (err) {
+      console.error("Failed to render PDF:", err);
+      setPdfRenderError("Could not render uploaded document.");
+    } finally {
+      setPdfRendering(false);
+    }
+  };
+
+  const closePdfModal = () => {
+    if (pdfBlobUrl) {
+      window.URL.revokeObjectURL(pdfBlobUrl);
+    }
+    setPdfBlobUrl(null);
+    setPdfModalOpen(false);
   };
 
   const isDayScholar = user?.student_type?.toLowerCase() !== "hostelite";
@@ -613,6 +687,136 @@ export const StudentDashboard = () => {
             fetchMyFee();
           }}
         />
+      )}
+
+      {/* In-App PDF Challan Inspection Modal (IDM-Proof Embedded Viewer) */}
+      {pdfModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(3px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1200,
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "1rem",
+              width: "100%",
+              maxWidth: "960px",
+              height: "88vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+              overflow: "hidden",
+              border: "1px solid #cbd5e1",
+            }}
+          >
+            <div
+              style={{
+                padding: "0.875rem 1.5rem",
+                backgroundColor: "#1e3a8a",
+                color: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderBottom: "1px solid #1e40af",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+                <FileText size={20} />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.0625rem", fontWeight: "700" }}>
+                    Uploaded Challan Slip Preview
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "#93c5fd" }}>
+                    {fee?.route_name} • Rs. {Number(fee?.amount || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={closePdfModal}
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  border: "none",
+                  color: "#ffffff",
+                  borderRadius: "0.375rem",
+                  cursor: "pointer",
+                  padding: "0.375rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                title="Close Preview"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body: High-Resolution PDF.js HTML5 Canvas Rendering */}
+            <div
+              style={{
+                flex: 1,
+                backgroundColor: "#334155",
+                overflowY: "auto",
+                padding: "1.5rem",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-start",
+              }}
+            >
+              {pdfRendering && (
+                <div style={{ color: "#ffffff", padding: "4rem 1rem", textAlign: "center" }}>
+                  <RefreshCw size={28} className="spin" style={{ margin: "0 auto 0.75rem auto", display: "block" }} />
+                  <p style={{ margin: 0, fontSize: "1rem", fontWeight: "600" }}>
+                    Loading & rendering uploaded PDF document...
+                  </p>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Rendering original bank challan page 1
+                  </span>
+                </div>
+              )}
+
+              {pdfRenderError && (
+                <div
+                  style={{
+                    backgroundColor: "#fef2f2",
+                    color: "#991b1b",
+                    padding: "1.25rem",
+                    borderRadius: "0.5rem",
+                    maxWidth: "500px",
+                    textAlign: "center",
+                    margin: "2rem auto",
+                    border: "1px solid #fecaca",
+                  }}
+                >
+                  <AlertTriangle size={24} style={{ margin: "0 auto 0.5rem auto", color: "#dc2626" }} />
+                  <h4 style={{ margin: "0 0 0.25rem 0", fontSize: "0.9375rem", fontWeight: "700" }}>Unable to Render Document</h4>
+                  <p style={{ margin: 0, fontSize: "0.8125rem" }}>{pdfRenderError}</p>
+                </div>
+              )}
+
+              <canvas
+                id="student-pdf-canvas"
+                style={{
+                  display: pdfRendering || pdfRenderError ? "none" : "block",
+                  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.4)",
+                  borderRadius: "0.375rem",
+                  backgroundColor: "#ffffff",
+                  maxWidth: "100%",
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
