@@ -17,6 +17,7 @@ from app.database import get_db
 from app.models import User, Route, Registration, Fee, FeeReceipt
 from app.schemas import RegistrationCreate, FeeOut, FeeReceiptOut
 from app.deps import get_current_user, require_role
+from app.routers.notifications import create_notification
 
 # Router for registration, fee voucher, and receipt upload operations
 router = APIRouter(tags=["Student Fees & Registrations"])
@@ -252,6 +253,16 @@ async def upload_fee_receipt(
 
     db.commit()
     db.refresh(new_receipt)
+
+    # Dispatch in-app notifications to all Accounts Officers and Admins
+    officers = db.query(User).filter(User.role.in_(["accounts", "admin"])).all()
+    for officer in officers:
+        create_notification(
+            db=db,
+            user_id=officer.id,
+            title="New Receipt Submitted",
+            message=f"Student {current_student.reg_no or current_student.full_name} has uploaded a fee receipt for verification."
+        )
 
     return new_receipt
 

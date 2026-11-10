@@ -28,6 +28,7 @@ from app.schemas import (
     ReceiptActionOut
 )
 from app.deps import require_role
+from app.routers.notifications import create_notification
 
 # Initialize router with standard URL prefix and Swagger documentation grouping
 router = APIRouter(prefix="/accounts", tags=["Accounts Officer - Verification"])
@@ -347,6 +348,15 @@ def approve_receipt(
     db.commit()
     db.refresh(receipt)
 
+    # Dispatch automated in-app notification to the student
+    if fee and fee.registration:
+        create_notification(
+            db=db,
+            user_id=fee.registration.user_id,
+            title="Fee Verified",
+            message="Your transport fee challan has been approved. Your bus seat is confirmed!"
+        )
+
     return ReceiptActionOut(
         success=True,
         receipt_id=receipt.id,
@@ -405,6 +415,15 @@ def reject_receipt(
 
     db.commit()
     db.refresh(receipt)
+
+    # Dispatch automated in-app notification to the student with rejection reason
+    if fee and fee.registration:
+        create_notification(
+            db=db,
+            user_id=fee.registration.user_id,
+            title="Wrong Fee Slip",
+            message=f"Your fee slip was rejected: '{payload.reason}'. Please upload a corrected receipt."
+        )
 
     return ReceiptActionOut(
         success=True,

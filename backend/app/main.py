@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 import app.models  # Imports model definitions so SQLAlchemy registers them with metadata
-from app.routers import auth, routes, fees, accounts  # Import modular domain routers
+from app.routers import auth, routes, fees, accounts, notifications  # Import modular domain routers
 
 # Synchronize models with PostgreSQL: creates any missing tables when the application starts
 Base.metadata.create_all(bind=engine)
@@ -49,6 +49,9 @@ app.include_router(fees.router)
 
 # 4. Mount accounts officer verification endpoints: /accounts/stats, /accounts/receipts, /accounts/students/{id}
 app.include_router(accounts.router)
+
+# 5. Mount in-app notification endpoints: GET /notifications, POST /notifications/{id}/read, POST /notifications/read-all
+app.include_router(notifications.router)
 
 
 # ==============================================================================

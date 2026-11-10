@@ -270,3 +270,32 @@ class StudentFeeHistoryOut(BaseModel):
     student: UserOut
     fee: Optional[FeeOut] = None
     receipts: List[FeeReceiptOut] = []
+
+
+# ==============================================================================
+# In-App Notification Schemas (Day 11)
+# ==============================================================================
+
+class NotificationOut(BaseModel):
+    """
+    Representation of an individual in-app notification delivered to a user.
+    Used by: GET /notifications, POST /notifications/{id}/read (app/routers/notifications.py)
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    title: str
+    message: str
+    is_read: bool
+    created_at: datetime
+
+
+class NotificationListOut(BaseModel):
+    """
+    Notification inbox response containing unread badge counter and full notification feed.
+    Used by: GET /notifications (app/routers/notifications.py)
+    """
+    unread_count: int = Field(default=0, description="Total number of unread notifications for notification bell badge")
+    notifications: List[NotificationOut] = Field(default=[], description="Chronological listing of notifications, newest first")
+
