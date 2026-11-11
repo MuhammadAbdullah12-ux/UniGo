@@ -201,6 +201,7 @@ def list_receipts(
             ReceiptListItemOut(
                 id=receipt.id,
                 fee_id=fee.id,
+                student_id=user.id,
                 student_name=user.full_name,
                 student_reg_no=user.reg_no,
                 route_name=route.name,
@@ -455,7 +456,9 @@ def get_student_fee_history(
                 original_name=r.original_name,
                 uploaded_at=r.uploaded_at,
                 status=r.status,
-                reject_reason=r.reject_reason
+                reject_reason=r.reject_reason,
+                verified_at=r.verified_at,
+                verified_by_name=r.verifier.full_name if r.verifier else None
             )
             for r in receipt_records
         ]

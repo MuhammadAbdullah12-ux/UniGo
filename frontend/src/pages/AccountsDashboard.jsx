@@ -413,7 +413,24 @@ export const AccountsDashboard = () => {
                     >
                       {/* Student */}
                       <td style={{ padding: "1rem 1.5rem" }}>
-                        <div style={{ fontWeight: "700", color: "#0f172a" }}>{r.student_name}</div>
+                        {r.student_id ? (
+                          <Link
+                            to={`/accounts/students/${r.student_id}`}
+                            title="View student payment history & audit timeline"
+                            style={{
+                              fontWeight: "700",
+                              color: "#1e40af",
+                              textDecoration: "none",
+                              display: "inline-block",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                            onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                          >
+                            {r.student_name}
+                          </Link>
+                        ) : (
+                          <div style={{ fontWeight: "700", color: "#0f172a" }}>{r.student_name}</div>
+                        )}
                         <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{r.student_reg_no}</div>
                       </td>
 

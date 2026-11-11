@@ -164,7 +164,7 @@ class FeeOut(BaseModel):
 class FeeReceiptOut(BaseModel):
     """
     Representation returned to student upon successful challan PDF submission.
-    Used by: POST /fees/{fee_id}/receipt (app/routers/fees.py)
+    Used by: POST /fees/{fee_id}/receipt (app/routers/fees.py), GET /accounts/students/{id}
     """
     model_config = ConfigDict(from_attributes=True)
 
@@ -174,6 +174,8 @@ class FeeReceiptOut(BaseModel):
     uploaded_at: datetime
     status: str
     reject_reason: Optional[str] = None
+    verified_at: Optional[datetime] = None
+    verified_by_name: Optional[str] = None
 
 
 class RejectReceiptIn(BaseModel):
@@ -228,6 +230,7 @@ class ReceiptListItemOut(BaseModel):
     """
     id: int
     fee_id: int
+    student_id: Optional[int] = None
     student_name: str
     student_reg_no: Optional[str] = None
     route_name: str

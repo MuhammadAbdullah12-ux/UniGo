@@ -16,6 +16,8 @@ import StudentDashboard from "./pages/StudentDashboard";
 import AccountsDashboard from "./pages/AccountsDashboard";
 import PendingReceipts from "./pages/PendingReceipts";
 import VerifyReceipt from "./pages/VerifyReceipt";
+import ReceiptsHistory from "./pages/ReceiptsHistory";
+import StudentDetail from "./pages/StudentDetail";
 import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
@@ -43,6 +45,9 @@ function App() {
             <Route path="/accounts" element={<AccountsDashboard />} />
             <Route path="/accounts/receipts" element={<PendingReceipts />} />
             <Route path="/accounts/receipts/:id" element={<VerifyReceipt />} />
+            <Route path="/accounts/history" element={<ReceiptsHistory />} />
+            <Route path="/accounts/students/:id" element={<StudentDetail />} />
+            <Route path="/accounts/students" element={<Navigate to="/accounts/history" replace />} />
           </Route>
 
           {/* ================================================================ */}

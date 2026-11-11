@@ -6,7 +6,7 @@
  *   - Audit History (/accounts/history) - Searchable historical ledger
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   FileText,
@@ -17,6 +17,8 @@ import {
   Clock,
   AlertCircle,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
@@ -31,8 +33,15 @@ export const ReceiptsTable = ({
   subtitle = "Review student submitted PDF documents, verify bank stamp, and approve or reject.",
   showSearch = true,
   maxRows,
+  pageSize = 10,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   // Filter receipts by search query
   const filteredReceipts = receipts.filter((r) => {
@@ -45,7 +54,10 @@ export const ReceiptsTable = ({
     );
   });
 
-  const displayReceipts = maxRows ? filteredReceipts.slice(0, maxRows) : filteredReceipts;
+  const totalPages = Math.max(1, Math.ceil(filteredReceipts.length / pageSize));
+  const displayReceipts = maxRows
+    ? filteredReceipts.slice(0, maxRows)
+    : filteredReceipts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div
@@ -147,7 +159,24 @@ export const ReceiptsTable = ({
                 >
                   {/* Student Identity */}
                   <td style={{ padding: "1rem 1.5rem" }}>
-                    <div style={{ fontWeight: "700", color: "#0f172a" }}>{r.student_name}</div>
+                    {r.student_id ? (
+                      <Link
+                        to={`/accounts/students/${r.student_id}`}
+                        title="View student payment history & audit timeline"
+                        style={{
+                          fontWeight: "700",
+                          color: "#1e40af",
+                          textDecoration: "none",
+                          display: "inline-block",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                        onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                      >
+                        {r.student_name}
+                      </Link>
+                    ) : (
+                      <div style={{ fontWeight: "700", color: "#0f172a" }}>{r.student_name}</div>
+                    )}
                     <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{r.student_reg_no || "N/A"}</div>
                   </td>
 
@@ -289,6 +318,80 @@ export const ReceiptsTable = ({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* 10-Row Pagination Footer (Day 17) */}
+      {!maxRows && filteredReceipts.length > pageSize && (
+        <div
+          style={{
+            padding: "0.875rem 1.5rem",
+            borderTop: "1px solid #e2e8f0",
+            backgroundColor: "#f8fafc",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+            fontSize: "0.8125rem",
+            color: "#64748b",
+          }}
+        >
+          <div>
+            Showing <strong>{(currentPage - 1) * pageSize + 1}</strong> to{" "}
+            <strong>{Math.min(currentPage * pageSize, filteredReceipts.length)}</strong> of{" "}
+            <strong>{filteredReceipts.length}</strong> receipts
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                padding: "0.375rem 0.75rem",
+                backgroundColor: "#ffffff",
+                border: "1px solid #cbd5e1",
+                borderRadius: "0.375rem",
+                fontSize: "0.75rem",
+                fontWeight: "600",
+                color: currentPage === 1 ? "#94a3b8" : "#334155",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <ChevronLeft size={14} />
+              Previous
+            </button>
+
+            <span style={{ padding: "0 0.5rem", fontWeight: "700", color: "#1e293b", fontSize: "0.75rem" }}>
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                padding: "0.375rem 0.75rem",
+                backgroundColor: "#ffffff",
+                border: "1px solid #cbd5e1",
+                borderRadius: "0.375rem",
+                fontSize: "0.75rem",
+                fontWeight: "600",
+                color: currentPage === totalPages ? "#94a3b8" : "#334155",
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              Next
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
       )}
     </div>
