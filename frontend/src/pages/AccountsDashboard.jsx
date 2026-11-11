@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   FileText,
   CheckCircle,
@@ -336,22 +337,38 @@ export const AccountsDashboard = () => {
               </p>
             </div>
 
-            {/* Search Bar */}
-            <div style={{ position: "relative", minWidth: "260px" }}>
-              <Search size={16} style={{ position: "absolute", left: "10px", top: "10px", color: "#9ca3af" }} />
-              <input
-                type="text"
-                placeholder="Search by student name or roll no..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <Link
+                to="/accounts/receipts"
+                title="View full dedicated queue"
                 style={{
-                  width: "100%",
-                  padding: "0.5rem 0.75rem 0.5rem 2rem",
-                  borderRadius: "0.5rem",
-                  border: "1px solid #cbd5e1",
                   fontSize: "0.8125rem",
+                  color: "#2563eb",
+                  fontWeight: "700",
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
                 }}
-              />
+              >
+                View Full Queue ({receipts.length}) →
+              </Link>
+
+              {/* Search Bar */}
+              <div style={{ position: "relative", minWidth: "240px" }}>
+                <Search size={16} style={{ position: "absolute", left: "10px", top: "10px", color: "#9ca3af" }} />
+                <input
+                  type="text"
+                  placeholder="Search by student name or roll no..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem 0.75rem 0.5rem 2rem",
+                    borderRadius: "0.5rem",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.8125rem",
+                  }}
+                />
+              </div>
             </div>
           </div>
 
@@ -433,17 +450,40 @@ export const AccountsDashboard = () => {
                       {/* Actions */}
                       <td style={{ padding: "1rem 1.5rem", textAlign: "right" }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.5rem" }}>
+                          <Link
+                            to={`/accounts/receipts/${r.id}`}
+                            title="Open full dedicated verification dossier screen"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.25rem",
+                              padding: "0.375rem 0.75rem",
+                              backgroundColor: "#2563eb",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: "0.375rem",
+                              fontSize: "0.75rem",
+                              fontWeight: "700",
+                              textDecoration: "none",
+                              cursor: "pointer",
+                              boxShadow: "0 1px 2px rgba(37, 99, 235, 0.2)",
+                            }}
+                          >
+                            <FileText size={13} />
+                            Review
+                          </Link>
+
                           <button
                             onClick={() => handleViewPdf(r)}
-                            title="Inspect physical PDF challan in-app"
+                            title="Inspect physical PDF challan in quick modal"
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
                               gap: "0.25rem",
                               padding: "0.375rem 0.625rem",
-                              backgroundColor: "#eff6ff",
-                              color: "#1e40af",
-                              border: "1px solid #bfdbfe",
+                              backgroundColor: "#f8fafc",
+                              color: "#475569",
+                              border: "1px solid #cbd5e1",
                               borderRadius: "0.375rem",
                               fontSize: "0.75rem",
                               fontWeight: "600",
@@ -451,7 +491,7 @@ export const AccountsDashboard = () => {
                             }}
                           >
                             <Eye size={13} />
-                            View PDF
+                            Quick Preview
                           </button>
 
                           <button

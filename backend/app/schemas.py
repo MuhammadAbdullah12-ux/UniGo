@@ -259,6 +259,8 @@ class ReceiptDetailOut(BaseModel):
     status: str
     original_name: str
     reject_reason: Optional[str] = None
+    verified_at: Optional[datetime] = None
+    verified_by_name: Optional[str] = None
     is_late: bool = Field(default=False, description="True if uploaded after voucher due date")
 
 

@@ -14,6 +14,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import StudentDashboard from "./pages/StudentDashboard";
 import AccountsDashboard from "./pages/AccountsDashboard";
+import PendingReceipts from "./pages/PendingReceipts";
+import VerifyReceipt from "./pages/VerifyReceipt";
 import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
@@ -39,6 +41,8 @@ function App() {
           {/* ================================================================ */}
           <Route element={<ProtectedRoute allowedRoles={["accounts"]} />}>
             <Route path="/accounts" element={<AccountsDashboard />} />
+            <Route path="/accounts/receipts" element={<PendingReceipts />} />
+            <Route path="/accounts/receipts/:id" element={<VerifyReceipt />} />
           </Route>
 
           {/* ================================================================ */}

@@ -40,10 +40,16 @@ export const Layout = ({ children }) => {
     if (role === "accounts") {
       return [
         {
-          name: "Verification Queue",
+          name: "Dashboard Overview",
           path: "/accounts",
           icon: LayoutDashboard,
-          description: "Pending challan reviews & KPIs",
+          description: "Financial KPIs & daily metrics",
+        },
+        {
+          name: "Pending Receipts",
+          path: "/accounts/receipts",
+          icon: FileCheck,
+          description: "Active review & verification queue",
         },
         {
           name: "Audit History",

@@ -246,6 +246,7 @@ def get_receipt_details(
 
     receipt, fee, registration, user, route = record
     is_late = bool(fee.due_date and receipt.uploaded_at > fee.due_date)
+    verified_by_name = receipt.verifier.full_name if (receipt.verifier) else None
 
     return ReceiptDetailOut(
         id=receipt.id,
@@ -265,6 +266,8 @@ def get_receipt_details(
         status=receipt.status,
         original_name=receipt.original_name,
         reject_reason=receipt.reject_reason,
+        verified_at=receipt.verified_at,
+        verified_by_name=verified_by_name,
         is_late=is_late
     )
 
