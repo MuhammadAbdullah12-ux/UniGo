@@ -132,12 +132,12 @@ def register_for_route(
             detail="Selected transport route does not exist or is inactive"
         )
 
-    # 2. Enforce bus seating capacity limit (55 seats)
+    # 2. Enforce bus seating capacity limit
     confirmed_seats = db.query(Registration).filter(Registration.route_id == route.id).count()
     if confirmed_seats >= route.seats_total:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Route '{route.name}' is currently at full capacity ({route.seats_total} seats)"
+            detail=f"Route is full. Route '{route.name}' has reached its maximum capacity of {route.seats_total} seats."
         )
 
     # 3. Check for existing registration in the same academic semester

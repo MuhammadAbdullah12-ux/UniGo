@@ -4,14 +4,27 @@
  * Automatically steers the user to their respective portal based on role claims.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { user, login } = useAuth();
+
+  // If already authenticated, redirect straight to their portal
+  useEffect(() => {
+    if (user) {
+      if (user.role === "admin") {
+        navigate("/admin", { replace: true });
+      } else if (user.role === "accounts") {
+        navigate("/accounts", { replace: true });
+      } else {
+        navigate("/student", { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");

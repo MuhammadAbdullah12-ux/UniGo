@@ -6,7 +6,7 @@
 
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Page Views
@@ -19,6 +19,15 @@ import VerifyReceipt from "./pages/VerifyReceipt";
 import ReceiptsHistory from "./pages/ReceiptsHistory";
 import StudentDetail from "./pages/StudentDetail";
 import AdminDashboard from "./pages/AdminDashboard";
+
+// Smart Fallback Redirect: navigates logged-in users to their role portal, guests to /login
+function RootRedirect() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === "admin") return <Navigate to="/admin" replace />;
+  if (user.role === "accounts") return <Navigate to="/accounts" replace />;
+  return <Navigate to="/student" replace />;
+}
 
 function App() {
   return (
@@ -55,13 +64,17 @@ function App() {
           {/* ================================================================ */}
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/routes" element={<AdminDashboard />} />
+            <Route path="/admin/routes/:id" element={<AdminDashboard />} />
+            <Route path="/admin/registrations" element={<AdminDashboard />} />
+            <Route path="/admin/schedules" element={<AdminDashboard />} />
           </Route>
 
           {/* ================================================================ */}
-          {/* Default Fallback: Redirect root and unknown paths to /login      */}
+          {/* Smart Fallback: Redirect root and unknown paths by auth state    */}
           {/* ================================================================ */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="*" element={<RootRedirect />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

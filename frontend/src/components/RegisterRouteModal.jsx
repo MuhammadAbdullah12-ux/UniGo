@@ -27,9 +27,12 @@ export const RegisterRouteModal = ({ isOpen, onClose, onSuccess, studentType = "
       setLoadingRoutes(true);
       API.get("/routes")
         .then((res) => {
-          setRoutes(res.data || []);
-          if (res.data && res.data.length > 0) {
-            setSelectedRouteId(String(res.data[0].id));
+          const list = res.data || [];
+          setRoutes(list);
+          if (list.length > 0) {
+            // Pick first route with available seats, or default to first
+            const firstAvailable = list.find((r) => ((r.seats_total || 55) - (r.seats_taken || 0)) > 0);
+            setSelectedRouteId(String((firstAvailable || list[0]).id));
           }
         })
         .catch((err) => {
@@ -203,11 +206,17 @@ export const RegisterRouteModal = ({ isOpen, onClose, onSuccess, studentType = "
                     color: "#111827",
                   }}
                 >
-                  {routes.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      Route {r.id}: {r.name}
-                    </option>
-                  ))}
+                  {routes.map((r) => {
+                    const total = r.seats_total || 55;
+                    const taken = r.seats_taken || 0;
+                    const seatsLeft = Math.max(0, total - taken);
+                    const isFull = seatsLeft <= 0;
+                    return (
+                      <option key={r.id} value={r.id} disabled={isFull}>
+                        {r.name} – {isFull ? "FULL (0 seats left)" : `${seatsLeft} seats left`}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

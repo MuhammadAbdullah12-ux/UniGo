@@ -41,8 +41,10 @@ app.add_middleware(
 # 1. Mount authentication endpoints: /auth/register, /auth/login, /auth/me
 app.include_router(auth.router)
 
-# 2. Mount transport route endpoints: GET /routes, GET /routes/{id}, POST /routes
+# 2. Mount transport route endpoints: GET /routes, GET /routes/{id}, POST /routes, PUT /routes/{id}, GET /routes/{id}/students
 app.include_router(routes.router)
+# 2b. Mount transport admin analytics: GET /admin/stats
+app.include_router(routes.admin_router)
 
 # 3. Mount student registration & fee voucher endpoints: POST /registrations, GET /fees/my, POST /fees/{id}/receipt
 app.include_router(fees.router)

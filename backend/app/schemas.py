@@ -122,6 +122,38 @@ class RouteOut(RouteBase):
     seats_taken: int = Field(default=0, description="Number of currently confirmed student registrations")
 
 
+class RouteStudentItemOut(BaseModel):
+    """
+    Representation of a registered student on a specific transport route.
+    Used by: GET /routes/{id}/students (app/routers/routes.py)
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    registration_id: int
+    user_id: int
+    student_name: str
+    student_reg_no: Optional[str] = None
+    student_type: Optional[str] = None
+    trip_type: str
+    semester: str
+    registered_at: datetime
+    fee_status: str = Field(default="unpaid", description="Status of linked fee: unpaid, pending, paid, rejected")
+    fee_amount: float
+
+
+class AdminStatsOut(BaseModel):
+    """
+    Transport administration dashboard metrics and fleet seat occupancy.
+    Used by: GET /admin/stats (app/routers/routes.py)
+    """
+    total_routes: int = Field(default=0, description="Total transport routes configured")
+    active_routes: int = Field(default=0, description="Currently operational transport routes")
+    total_seats: int = Field(default=0, description="Total seating capacity across active routes")
+    seats_taken: int = Field(default=0, description="Total confirmed student registrations")
+    registered_students: int = Field(default=0, description="Total unique students registered")
+    occupancy_percentage: float = Field(default=0.0, description="Overall fleet seat occupancy percentage")
+
+
 # ==============================================================================
 # Route Registration & Fee Schemas
 # ==============================================================================
