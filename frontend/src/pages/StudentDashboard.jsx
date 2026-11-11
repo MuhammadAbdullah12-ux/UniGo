@@ -29,6 +29,7 @@ import StatusBadge from "../components/StatusBadge";
 import NotificationBell from "../components/NotificationBell";
 import RegisterRouteModal from "../components/RegisterRouteModal";
 import UploadReceiptModal from "../components/UploadReceiptModal";
+import Layout from "../components/Layout";
 
 export const StudentDashboard = () => {
   const { user, logout } = useAuth();
@@ -140,120 +141,8 @@ export const StudentDashboard = () => {
   const isDayScholar = user?.student_type?.toLowerCase() !== "hostelite";
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#f8fafc", color: "#1e293b", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      {/* =========================================================================
-          Top Navigation Header
-      ========================================================================= */}
-      <header
-        style={{
-          backgroundColor: "#ffffff",
-          borderBottom: "1px solid #e2e8f0",
-          padding: "0.875rem 2rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-        }}
-      >
-        {/* Brand Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <div
-            style={{
-              backgroundColor: "#1e3a8a",
-              color: "#ffffff",
-              padding: "0.5rem",
-              borderRadius: "0.5rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Bus size={22} />
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "1.125rem", fontWeight: "800", color: "#1e3a8a", letterSpacing: "-0.01em" }}>
-              UniGo Transport
-            </h1>
-            <p style={{ margin: 0, fontSize: "0.6875rem", color: "#64748b", fontWeight: "500" }}>
-              FAST-NUCES CFD Campus
-            </p>
-          </div>
-        </div>
-
-        {/* User Identity & Top Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <NotificationBell />
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.625rem",
-              padding: "0.375rem 0.75rem",
-              backgroundColor: "#f1f5f9",
-              borderRadius: "9999px",
-              border: "1px solid #e2e8f0",
-            }}
-          >
-            <div
-              style={{
-                width: "28px",
-                height: "28px",
-                borderRadius: "50%",
-                backgroundColor: "#2563eb",
-                color: "#ffffff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.75rem",
-                fontWeight: "700",
-              }}
-            >
-              {user?.full_name?.charAt(0) || "S"}
-            </div>
-            <div style={{ lineHeight: "1.2" }}>
-              <span style={{ fontSize: "0.8125rem", fontWeight: "700", color: "#1e293b", display: "block" }}>
-                {user?.full_name}
-              </span>
-              <span style={{ fontSize: "0.6875rem", color: "#64748b" }}>
-                {user?.reg_no || user?.email} • {isDayScholar ? "Day Scholar" : "Hostelite"}
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={logout}
-            title="Sign out of your account"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.375rem",
-              padding: "0.5rem 0.875rem",
-              backgroundColor: "#ffffff",
-              color: "#dc2626",
-              border: "1px solid #fecaca",
-              borderRadius: "0.5rem",
-              fontSize: "0.8125rem",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "background 0.2s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#fef2f2")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#ffffff")}
-          >
-            <LogOut size={15} />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </header>
-
-      {/* =========================================================================
-          Main Dashboard Container
-      ========================================================================= */}
-      <main style={{ maxWidth: "1080px", margin: "2rem auto", padding: "0 1.5rem" }}>
+    <Layout>
+      <div style={{ maxWidth: "1080px", margin: "1.5rem auto", padding: "0 1.5rem" }}>
         {/* Welcome Intro Header */}
         <div style={{ marginBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
@@ -659,7 +548,7 @@ export const StudentDashboard = () => {
             </div>
           </>
         )}
-      </main>
+      </div>
 
       {/* =========================================================================
           Interactive Modals
@@ -818,7 +707,7 @@ export const StudentDashboard = () => {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   );
 };
 

@@ -4,7 +4,8 @@ Provides dependencies injected into route handlers to validate JWT bearer tokens
 retrieve authenticated user records from PostgreSQL, and enforce role permissions.
 """
 
-from fastapi import Depends, HTTPException, status
+from typing import Optional
+from fastapi import Depends, HTTPException, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from jwt.exceptions import PyJWTError
@@ -14,20 +15,23 @@ from app.models import User
 from app.security import decode_token
 
 # HTTPBearer extracts the 'Authorization: Bearer <token>' header from incoming requests.
-# It also automatically enables the green 'Authorize' button in Swagger UI (/docs).
-security_scheme = HTTPBearer()
+# auto_error=False enables fallback to the '?token=' query parameter for direct browser PDF streaming.
+security_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    token: Optional[str] = Query(None, alias="token"),
     db: Session = Depends(get_db)
 ) -> User:
     """
     Validates the bearer token on incoming requests and retrieves the authenticated User.
+    Accepts token via standard Authorization header or '?token=' query parameter (for direct PDF viewing).
     Injected into protected endpoints using: current_user: User = Depends(get_current_user)
 
     Args:
         credentials: Bearer token extracted from HTTP Authorization header.
+        token: Optional JWT token passed as a URL query parameter for browser tabs.
         db: Active SQLAlchemy database session for the request.
 
     Returns:
@@ -36,7 +40,19 @@ def get_current_user(
     Raises:
         HTTPException 401: If the token is missing, expired, tampered with, or user no longer exists.
     """
-    token = credentials.credentials
+    raw_token = None
+    if credentials and credentials.credentials:
+        raw_token = credentials.credentials
+    elif token:
+        raw_token = token
+
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials or token expired",
@@ -45,7 +61,7 @@ def get_current_user(
 
     try:
         # Decode and verify token signature and expiration
-        payload = decode_token(token)
+        payload = decode_token(raw_token)
         user_id_str: str = payload.get("sub")
         if user_id_str is None:
             raise credentials_exception

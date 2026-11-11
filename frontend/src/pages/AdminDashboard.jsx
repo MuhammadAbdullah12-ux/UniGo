@@ -24,6 +24,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import API from "../api/client";
 import NotificationBell from "../components/NotificationBell";
+import Layout from "../components/Layout";
 
 export const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -106,116 +107,8 @@ export const AdminDashboard = () => {
   };
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#f8fafc", color: "#1e293b", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      {/* =========================================================================
-          Top Header Bar
-      ========================================================================= */}
-      <header
-        style={{
-          backgroundColor: "#ffffff",
-          borderBottom: "1px solid #e2e8f0",
-          padding: "0.875rem 2rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <div
-            style={{
-              backgroundColor: "#1e3a8a",
-              color: "#ffffff",
-              padding: "0.5rem",
-              borderRadius: "0.5rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Bus size={22} />
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "1.125rem", fontWeight: "800", color: "#1e3a8a" }}>
-              Transport Admin Portal
-            </h1>
-            <p style={{ margin: 0, fontSize: "0.6875rem", color: "#64748b" }}>
-              FAST-NUCES CFD Campus • Fleet & Route Management
-            </p>
-          </div>
-        </div>
-
-        {/* Header Right Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          {/* Notification Bell */}
-          <NotificationBell />
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.625rem",
-              padding: "0.375rem 0.75rem",
-              backgroundColor: "#f1f5f9",
-              borderRadius: "9999px",
-              border: "1px solid #e2e8f0",
-            }}
-          >
-            <div
-              style={{
-                width: "28px",
-                height: "28px",
-                borderRadius: "50%",
-                backgroundColor: "#2563eb",
-                color: "#ffffff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.75rem",
-                fontWeight: "700",
-              }}
-            >
-              TA
-            </div>
-            <div style={{ lineHeight: "1.2" }}>
-              <span style={{ fontSize: "0.8125rem", fontWeight: "700", color: "#1e293b", display: "block" }}>
-                {user?.full_name || "Transport Administrator"}
-              </span>
-              <span style={{ fontSize: "0.6875rem", color: "#64748b" }}>
-                {user?.email} • Fleet Officer
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={logout}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.375rem",
-              padding: "0.5rem 0.875rem",
-              backgroundColor: "#ffffff",
-              color: "#dc2626",
-              border: "1px solid #fecaca",
-              borderRadius: "0.5rem",
-              fontSize: "0.8125rem",
-              fontWeight: "600",
-              cursor: "pointer",
-            }}
-          >
-            <LogOut size={15} />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </header>
-
-      {/* =========================================================================
-          Main Content Body
-      ========================================================================= */}
-      <main style={{ maxWidth: "1200px", margin: "2rem auto", padding: "0 1.5rem" }}>
+    <Layout>
+      <div style={{ maxWidth: "1240px", margin: "1.5rem auto", padding: "0 1.5rem" }}>
         {/* Title & Refresh */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.5rem" }}>
           <div>
@@ -530,7 +423,7 @@ export const AdminDashboard = () => {
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       {/* =========================================================================
           Add Route Modal
@@ -677,7 +570,7 @@ export const AdminDashboard = () => {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   );
 };
 
