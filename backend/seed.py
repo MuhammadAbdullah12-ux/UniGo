@@ -1,17 +1,30 @@
 """
-Database seeder script for UniGo Transport Management System.
-Populates initial administrative accounts (Transport Admin, Accounts Officer)
-and official FAST-NUCES Chiniot-Faisalabad campus bus routes.
-Idempotent design: safely skips existing records to prevent unique constraint violations.
+Database seeder script for UniGo Transport Management System (Day 21).
+Populates administrative accounts (Transport Admin, Accounts Officer),
+sample student account (Muhammad Abdullah), and official FAST-NUCES bus routes.
+
+Usage:
+  python seed.py           # Idempotent seed: inserts missing accounts & routes
+  python seed.py --reset   # Clean reset: drops tables, recreates schema, seeds fresh data
 """
 
-from app.database import SessionLocal
-from app.models import User, Route
+import sys
+from app.database import engine, SessionLocal, Base
+from app.models import User, Route, Fee, FeeReceipt, Registration, Notification
 from app.security import hash_password
 
 
+def reset_schema():
+    """Drops and recreates all database tables for a clean slate."""
+    print("⚠️  Dropping all database tables...")
+    Base.metadata.drop_all(bind=engine)
+    print("🔨 Recreating fresh database schema...")
+    Base.metadata.create_all(bind=engine)
+    print("✓ Schema reset complete.")
+
+
 def seed_database():
-    """Executes the seeding transaction across user accounts and transport routes."""
+    """Executes the seeding transaction across demo accounts and transport routes."""
     db = SessionLocal()
 
     try:
@@ -20,14 +33,14 @@ def seed_database():
         print("==================================================")
 
         # ----------------------------------------------------------------------
-        # 1. Administrative & Staff Accounts
+        # 1. Staff and Demo Accounts
         # ----------------------------------------------------------------------
-        staff_accounts = [
+        demo_accounts = [
             {
                 "reg_no": None,
                 "full_name": "Transport Administrator",
                 "email": "admin@unigo.test",
-                "password": "AdminPassword123",
+                "password": "admin123",
                 "role": "admin",
                 "student_type": None,
                 "phone": "0300-1112233"
@@ -36,15 +49,24 @@ def seed_database():
                 "reg_no": None,
                 "full_name": "Accounts Officer",
                 "email": "accounts@unigo.test",
-                "password": "AccountsPassword123",
+                "password": "accounts123",
                 "role": "accounts",
                 "student_type": None,
                 "phone": "0300-4445566"
+            },
+            {
+                "reg_no": "23F-0509",
+                "full_name": "Muhammad Abdullah",
+                "email": "student@unigo.test",
+                "password": "student123",
+                "role": "student",
+                "student_type": "day_scholar",
+                "phone": "0301-7788990"
             }
         ]
 
-        print("\n[1/2] Seeding Staff Accounts:")
-        for account in staff_accounts:
+        print("\n[1/2] Seeding Demo User Accounts:")
+        for account in demo_accounts:
             existing_user = db.query(User).filter(User.email == account["email"]).first()
             if not existing_user:
                 new_user = User(
@@ -57,9 +79,11 @@ def seed_database():
                     phone=account["phone"]
                 )
                 db.add(new_user)
-                print(f"  ✓ Created: {account['role'].upper()} ({account['email']})")
+                print(f"  ✓ Created: {account['role'].upper()} ({account['email']} / {account['password']})")
             else:
-                print(f"  - Exists:  {account['role'].upper()} ({account['email']})")
+                # Refresh password to ensure known credentials work
+                existing_user.password_hash = hash_password(account["password"])
+                print(f"  ✓ Updated credentials: {account['role'].upper()} ({account['email']} / {account['password']})")
 
         # ----------------------------------------------------------------------
         # 2. FAST-NUCES Official Campus Bus Routes (All Rs. 36,000 / 55 Seats)
@@ -164,6 +188,9 @@ def seed_database():
         db.commit()
         print("\n==================================================")
         print("✅ DATABASE SEEDING COMPLETED SUCCESSFULLY!")
+        print("   Admin Account:    admin@unigo.test   / admin123")
+        print("   Accounts Officer: accounts@unigo.test / accounts123")
+        print("   Student Account:  student@unigo.test  / student123")
         print("==================================================")
 
     except Exception as e:
@@ -175,5 +202,6 @@ def seed_database():
 
 
 if __name__ == "__main__":
+    if "--reset" in sys.argv:
+        reset_schema()
     seed_database()
-
