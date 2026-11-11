@@ -22,6 +22,7 @@ import {
   CreditCard,
   ShieldCheck,
   ChevronRight,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
@@ -63,6 +64,12 @@ export const Layout = ({ children }) => {
           icon: Users,
           description: "Financial dossiers & audit trails",
         },
+        {
+          name: "Notifications",
+          path: "/notifications",
+          icon: Bell,
+          description: "Challan alerts & system notices",
+        },
       ];
     }
 
@@ -86,6 +93,12 @@ export const Layout = ({ children }) => {
           icon: Clock,
           description: "Exam & Friday early departure",
         },
+        {
+          name: "Notifications",
+          path: "/notifications",
+          icon: Bell,
+          description: "Challan alerts & system notices",
+        },
       ];
     }
 
@@ -102,6 +115,12 @@ export const Layout = ({ children }) => {
         path: "/student",
         icon: MapPin,
         description: "Browse bus routes & stops",
+      },
+      {
+        name: "Notifications",
+        path: "/notifications",
+        icon: Bell,
+        description: "Fee status alerts & updates",
       },
     ];
   };
@@ -309,7 +328,13 @@ export const Layout = ({ children }) => {
             <span style={{ fontSize: "0.8125rem", color: "#64748b", fontWeight: "500" }}>Portal</span>
             <ChevronRight size={14} color="#94a3b8" />
             <span style={{ fontSize: "0.8125rem", color: "#0f172a", fontWeight: "700" }}>
-              {user?.role === "accounts" ? "Accounts Officer Verification" : user?.role === "admin" ? "Transport Administration" : "Student Commute"}
+              {location.pathname.includes("notifications")
+                ? "Notification Center"
+                : user?.role === "accounts"
+                ? "Accounts Officer Verification"
+                : user?.role === "admin"
+                ? "Transport Administration"
+                : "Student Commute"}
             </span>
           </div>
 

@@ -19,6 +19,7 @@ import VerifyReceipt from "./pages/VerifyReceipt";
 import ReceiptsHistory from "./pages/ReceiptsHistory";
 import StudentDetail from "./pages/StudentDetail";
 import AdminDashboard from "./pages/AdminDashboard";
+import NotificationsPage from "./pages/NotificationsPage";
 
 // Smart Fallback Redirect: navigates logged-in users to their role portal, guests to /login
 function RootRedirect() {
@@ -68,6 +69,16 @@ function App() {
             <Route path="/admin/routes/:id" element={<AdminDashboard />} />
             <Route path="/admin/registrations" element={<AdminDashboard />} />
             <Route path="/admin/schedules" element={<AdminDashboard />} />
+          </Route>
+
+          {/* ================================================================ */}
+          {/* Notification Center (Accessible across all authenticated roles)   */}
+          {/* ================================================================ */}
+          <Route element={<ProtectedRoute allowedRoles={["student", "accounts", "admin"]} />}>
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/student/notifications" element={<NotificationsPage />} />
+            <Route path="/accounts/notifications" element={<NotificationsPage />} />
+            <Route path="/admin/notifications" element={<NotificationsPage />} />
           </Route>
 
           {/* ================================================================ */}
