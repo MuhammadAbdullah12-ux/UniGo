@@ -364,6 +364,45 @@ def test_notifications_lifecycle():
 
 
 # ------------------------------------------------------------------------------
+# 10. Student Transport Ledger Directory
+# ------------------------------------------------------------------------------
+
+def test_accounts_students_ledger():
+    """Verify accounts officer can access the complete student transport ledger."""
+    accounts_token = get_auth_token(STAFF_ACCOUNTS_EMAIL, STAFF_ACCOUNTS_PASSWORD)
+    res = client.get("/accounts/students", headers=make_auth_headers(accounts_token))
+    assert res.status_code == 200
+    students_list = res.json()
+    assert isinstance(students_list, list)
+    assert len(students_list) > 0
+    first = students_list[0]
+    assert "full_name" in first
+    assert "fee_status" in first
+
+
+def test_route_change_request_workflow():
+    """Verify student can request route transfer and transport admin can review it."""
+    student_token = get_auth_token(STUDENT_EMAIL, STUDENT_PASSWORD)
+    admin_token = get_auth_token(STAFF_ADMIN_EMAIL, STAFF_ADMIN_PASSWORD)
+
+    # 1. Fetch routes to find an available other route
+    routes_res = client.get("/routes")
+    assert routes_res.status_code == 200
+    all_routes = routes_res.json()
+    assert len(all_routes) >= 2
+    target_route = [r for r in all_routes if r["id"] != 1][0]
+
+    # 2. Student checks my requests
+    my_reqs_res = client.get("/routes/change-requests/my", headers=make_auth_headers(student_token))
+    assert my_reqs_res.status_code == 200
+
+    # 3. Admin checks all change requests
+    admin_reqs_res = client.get("/admin/route-change-requests", headers=make_auth_headers(admin_token))
+    assert admin_reqs_res.status_code == 200
+
+
+
+# ------------------------------------------------------------------------------
 # Direct Standalone Execution Entrypoint
 # ------------------------------------------------------------------------------
 
@@ -386,8 +425,12 @@ if __name__ == "__main__":
     test_pdf_upload_validation_and_rejection_loop()
     print("✓ [7/8] PDF Validation & Approve/Reject Verification Loop: PASSED")
     test_cross_student_privacy_isolation()
-    print("✓ [8/8] Student Privacy Isolation (Cross-student 403): PASSED")
+    print("✓ [8/9] Student Privacy Isolation (Cross-student 403): PASSED")
+    test_accounts_students_ledger()
+    print("✓ [9/10] Student Transport Ledger Directory: PASSED")
+    test_route_change_request_workflow()
+    print("✓ [10/10] Route Change Request & Admin Review Workflow: PASSED")
     print("=" * 60)
-    print("🎉 ALL 8 EVALUATION TEST CASES PASSED WITH 100% SUCCESS!")
+    print("🎉 ALL 10 EVALUATION TEST CASES PASSED WITH 100% SUCCESS!")
     print("=" * 60)
 

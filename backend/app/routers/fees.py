@@ -140,15 +140,16 @@ def register_for_route(
             detail=f"Route is full. Route '{route.name}' has reached its maximum capacity of {route.seats_total} seats."
         )
 
-    # 3. Check for existing registration in the same academic semester
+    # 3. Strict 1-Route Policy: Students are restricted to exactly one bus route.
+    # Multiple route enrollments are blocked. Route transfers require Transport Admin authorization.
     existing_reg = db.query(Registration).filter(
-        Registration.user_id == current_student.id,
-        Registration.semester == reg_data.semester.strip()
+        Registration.user_id == current_student.id
     ).first()
     if existing_reg:
+        current_route_name = existing_reg.route.name if existing_reg.route else "another bus route"
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"You are already registered for semester '{reg_data.semester}'. Route changes require Transport Admin approval."
+            detail=f"You are already enrolled in '{current_route_name}'. Students are restricted to exactly one bus route at a time. To switch your route, please contact the Transport Administrator."
         )
 
     # 4. Context-Aware Fee Calculation based on Student Residence Type

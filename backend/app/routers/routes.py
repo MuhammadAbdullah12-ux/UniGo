@@ -5,18 +5,22 @@ Mounted in app/main.py under the /routes and /admin URL prefixes.
 """
 
 from typing import List, Optional
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 
 from app.database import get_db
-from app.models import Route, Registration, User, Fee
+from app.models import Route, Registration, User, Fee, RouteChangeRequest, utcnow
 from app.schemas import (
     RouteCreate,
     RouteOut,
     RouteUpdate,
     RouteStudentItemOut,
-    AdminStatsOut
+    AdminStatsOut,
+    RouteChangeRequestCreate,
+    RouteChangeRequestReview,
+    RouteChangeRequestOut,
 )
 from app.deps import require_role
 
@@ -272,3 +276,379 @@ def get_admin_fleet_stats(
         registered_students=registered_students,
         occupancy_percentage=occupancy_pct
     )
+
+
+# ==============================================================================
+# 7. Admin Transfer / Switch Student Route (Admin Only)
+# ==============================================================================
+
+class RouteSwitchIn(BaseModel):
+    new_route_id: int
+
+
+@admin_router.put("/registrations/{student_id}/switch-route")
+def switch_student_route(
+    student_id: int,
+    payload: RouteSwitchIn,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_role("admin"))
+):
+    """
+    Administrative route transfer endpoint.
+    Transfers an enrolled student to a new route upon admin authorization.
+    Verifies that the target route exists, is active, and has available seats.
+    Dispatches a notification to the student informing them of the approved route change.
+    """
+    reg = db.query(Registration).filter(Registration.user_id == student_id).order_by(desc(Registration.created_at)).first()
+    if not reg:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student is not currently registered for any bus route."
+        )
+
+    target_route = db.query(Route).filter(Route.id == payload.new_route_id, Route.is_active == True).first()
+    if not target_route:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target transport route does not exist or is inactive."
+        )
+
+    if reg.route_id == target_route.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Student is already assigned to this route."
+        )
+
+    target_seats_taken = db.query(Registration).filter(Registration.route_id == target_route.id).count()
+    if target_seats_taken >= target_route.seats_total:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Target route '{target_route.name}' is full ({target_route.seats_total}/{target_route.seats_total} seats taken)."
+        )
+
+    old_route_name = reg.route.name if reg.route else "previous route"
+
+    reg.route_id = target_route.id
+
+    # If linked fee exists, update route association
+    if reg.fee:
+        reg.fee.route_id = target_route.id
+
+    db.commit()
+    db.refresh(reg)
+
+    from app.routers.notifications import create_notification
+    create_notification(
+        db=db,
+        user_id=student_id,
+        title="Bus Route Switched",
+        message=f"Your transport route has been successfully transferred from '{old_route_name}' to '{target_route.name}' by Transport Administration."
+    )
+
+    return {
+        "success": True,
+        "message": f"Student successfully transferred from '{old_route_name}' to '{target_route.name}'.",
+        "student_id": student_id,
+        "new_route_id": target_route.id,
+        "new_route_name": target_route.name
+    }
+
+
+# ==============================================================================
+# 8. Student Route Change / Transfer Requests
+# ==============================================================================
+
+@router.post("/change-requests", status_code=status.HTTP_201_CREATED)
+def submit_route_change_request(
+    payload: RouteChangeRequestCreate,
+    db: Session = Depends(get_db),
+    current_student: User = Depends(require_role("student"))
+):
+    """
+    Allows an enrolled student to request a route change/transfer.
+    Validates:
+      1. Student is registered for an existing route.
+      2. Target route exists, is active, and is different from current route.
+      3. Student does not already have an active pending request.
+      4. Target route has available seating capacity.
+    Notifies Transport Administration of the incoming request.
+    """
+    reg = db.query(Registration).filter(Registration.user_id == current_student.id).order_by(desc(Registration.created_at)).first()
+    if not reg:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are not currently enrolled in any bus route. Please enroll in a route first."
+        )
+
+    target_route = db.query(Route).filter(Route.id == payload.requested_route_id, Route.is_active == True).first()
+    if not target_route:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target transport route does not exist or is inactive."
+        )
+
+    if reg.route_id == target_route.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"You are already assigned to '{target_route.name}'."
+        )
+
+    # Check for active pending request
+    pending = db.query(RouteChangeRequest).filter(
+        RouteChangeRequest.user_id == current_student.id,
+        RouteChangeRequest.status == "pending"
+    ).first()
+    if pending:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You already have an active route transfer request under review by the Transport Administrator."
+        )
+
+    # Check target capacity
+    seats_taken = db.query(Registration).filter(Registration.route_id == target_route.id).count()
+    if seats_taken >= target_route.seats_total:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Target route '{target_route.name}' has reached its maximum capacity ({target_route.seats_total} seats)."
+        )
+
+    new_request = RouteChangeRequest(
+        user_id=current_student.id,
+        current_route_id=reg.route_id,
+        requested_route_id=target_route.id,
+        reason=payload.reason.strip(),
+        status="pending"
+    )
+    db.add(new_request)
+    db.commit()
+    db.refresh(new_request)
+
+    # Alert Transport Administrators
+    admins = db.query(User).filter(User.role == "admin").all()
+    from app.routers.notifications import create_notification
+    for adm in admins:
+        create_notification(
+            db=db,
+            user_id=adm.id,
+            title="Route Transfer Request",
+            message=f"Student {current_student.full_name} ({current_student.reg_no or 'N/A'}) requested to switch from '{reg.route.name}' to '{target_route.name}'."
+        )
+
+    return {
+        "success": True,
+        "message": f"Transfer request to '{target_route.name}' submitted successfully.",
+        "request_id": new_request.id
+    }
+
+
+@router.get("/change-requests/my")
+def get_my_route_change_requests(
+    db: Session = Depends(get_db),
+    current_student: User = Depends(require_role("student"))
+):
+    """
+    Returns chronological list of all route change requests submitted by the current student.
+    """
+    requests = (
+        db.query(RouteChangeRequest)
+        .filter(RouteChangeRequest.user_id == current_student.id)
+        .order_by(desc(RouteChangeRequest.created_at))
+        .all()
+    )
+    res = []
+    for r in requests:
+        res.append({
+            "id": r.id,
+            "user_id": r.user_id,
+            "current_route_id": r.current_route_id,
+            "current_route_name": r.current_route.name if r.current_route else "Unknown",
+            "requested_route_id": r.requested_route_id,
+            "requested_route_name": r.requested_route.name if r.requested_route else "Unknown",
+            "reason": r.reason,
+            "status": r.status,
+            "admin_notes": r.admin_notes,
+            "created_at": r.created_at,
+            "reviewed_at": r.reviewed_at,
+            "reviewer_name": r.reviewer.full_name if r.reviewer else None
+        })
+    return res
+
+
+@router.delete("/change-requests/{request_id}")
+def cancel_route_change_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_student: User = Depends(require_role("student"))
+):
+    """
+    Allows a student to cancel their own pending route change request.
+    """
+    req = db.query(RouteChangeRequest).filter(
+        RouteChangeRequest.id == request_id,
+        RouteChangeRequest.user_id == current_student.id
+    ).first()
+
+    if not req:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found.")
+    if req.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot cancel a request that has already been {req.status}."
+        )
+
+    req.status = "cancelled"
+    db.commit()
+    return {"success": True, "message": "Route change request has been cancelled."}
+
+
+# ==============================================================================
+# 9. Transport Admin Route Change Review & Directory
+# ==============================================================================
+
+@admin_router.get("/route-change-requests")
+def get_admin_route_change_requests(
+    status_filter: Optional[str] = Query(None, description="'pending', 'approved', 'rejected', or 'all'"),
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_role("admin"))
+):
+    """
+    Lists all route change requests across the student body for administrative review.
+    """
+    query = db.query(RouteChangeRequest)
+    if status_filter and status_filter != "all":
+        query = query.filter(RouteChangeRequest.status == status_filter)
+
+    requests = query.order_by(desc(RouteChangeRequest.created_at)).all()
+
+    res = []
+    for r in requests:
+        res.append({
+            "id": r.id,
+            "user_id": r.user_id,
+            "student_name": r.user.full_name if r.user else "Unknown",
+            "student_reg_no": r.user.reg_no if r.user else None,
+            "student_email": r.user.email if r.user else "Unknown",
+            "student_type": r.user.student_type if r.user else None,
+            "current_route_id": r.current_route_id,
+            "current_route_name": r.current_route.name if r.current_route else "Unknown",
+            "requested_route_id": r.requested_route_id,
+            "requested_route_name": r.requested_route.name if r.requested_route else "Unknown",
+            "reason": r.reason,
+            "status": r.status,
+            "admin_notes": r.admin_notes,
+            "created_at": r.created_at,
+            "reviewed_at": r.reviewed_at,
+            "reviewer_name": r.reviewer.full_name if r.reviewer else None
+        })
+    return res
+
+
+@admin_router.put("/route-change-requests/{request_id}/review")
+def review_route_change_request(
+    request_id: int,
+    payload: RouteChangeRequestReview,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_role("admin"))
+):
+    """
+    Administrative review of a student's route transfer request.
+    If approved:
+      1. Verifies target route is active and has available capacity.
+      2. Reassigns student's Registration.route_id and linked Fee.route_id.
+      3. Dispatches approval notification to the student.
+    If rejected:
+      1. Records rejection reason in admin_notes.
+      2. Dispatches rejection notification to the student.
+    """
+    req = db.query(RouteChangeRequest).filter(RouteChangeRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Route change request not found."
+        )
+
+    if req.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This request has already been processed as '{req.status}'."
+        )
+
+    from app.routers.notifications import create_notification
+
+    if payload.action == "approve":
+        target_route = db.query(Route).filter(Route.id == req.requested_route_id, Route.is_active == True).first()
+        if not target_route:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Target route is no longer active."
+            )
+
+        target_seats_taken = db.query(Registration).filter(Registration.route_id == target_route.id).count()
+        if target_seats_taken >= target_route.seats_total:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot approve: '{target_route.name}' has reached its maximum capacity ({target_route.seats_total}/{target_route.seats_total} seats)."
+            )
+
+        reg = db.query(Registration).filter(Registration.user_id == req.user_id).order_by(desc(Registration.created_at)).first()
+        if not reg:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Student no longer has an active bus registration."
+            )
+
+        old_route_name = reg.route.name if reg.route else "previous route"
+        reg.route_id = target_route.id
+        if reg.fee:
+            reg.fee.route_id = target_route.id
+
+        req.status = "approved"
+        req.reviewed_at = utcnow()
+        req.reviewed_by = current_admin.id
+        req.admin_notes = payload.admin_notes
+
+        db.commit()
+        db.refresh(req)
+
+        create_notification(
+            db=db,
+            user_id=req.user_id,
+            title="Route Transfer Approved",
+            message=f"Your request to switch from '{old_route_name}' to '{target_route.name}' has been APPROVED by Transport Administration."
+        )
+
+        return {
+            "success": True,
+            "message": f"Transfer approved: student assigned to '{target_route.name}'.",
+            "status": "approved"
+        }
+
+    elif payload.action == "reject":
+        req.status = "rejected"
+        req.reviewed_at = utcnow()
+        req.reviewed_by = current_admin.id
+        req.admin_notes = payload.admin_notes
+
+        db.commit()
+        db.refresh(req)
+
+        target_name = req.requested_route.name if req.requested_route else "requested route"
+        notes_str = f" Reason: {payload.admin_notes}" if payload.admin_notes else ""
+        create_notification(
+            db=db,
+            user_id=req.user_id,
+            title="Route Transfer Declined",
+            message=f"Your request to switch to '{target_name}' was declined by Transport Administration.{notes_str}"
+        )
+
+        return {
+            "success": True,
+            "message": "Route change request rejected.",
+            "status": "rejected"
+        }
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Action must be either 'approve' or 'reject'."
+        )
+

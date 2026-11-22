@@ -153,3 +153,29 @@ class Notification(Base):
 
     # Relational connections
     user = relationship("User", back_populates="notifications")
+
+
+class RouteChangeRequest(Base):
+    """
+    Tracks official route change/transfer requests submitted by students
+    to be reviewed, approved, or rejected by the Transport Administrator.
+    """
+    __tablename__ = "route_change_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    current_route_id = Column(Integer, ForeignKey("routes.id", ondelete="CASCADE"), nullable=False)
+    requested_route_id = Column(Integer, ForeignKey("routes.id", ondelete="CASCADE"), nullable=False)
+    reason = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, default="pending")  # 'pending', 'approved', 'rejected', 'cancelled'
+    admin_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Relational connections
+    user = relationship("User", foreign_keys=[user_id])
+    current_route = relationship("Route", foreign_keys=[current_route_id])
+    requested_route = relationship("Route", foreign_keys=[requested_route_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+

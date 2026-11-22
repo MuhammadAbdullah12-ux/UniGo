@@ -309,6 +309,31 @@ class StudentFeeHistoryOut(BaseModel):
     receipts: List[FeeReceiptOut] = []
 
 
+class StudentLedgerItemOut(BaseModel):
+    """
+    Representation of a commuter student in the Accounts Officer Student Ledger directory.
+    Used by: GET /accounts/students (app/routers/accounts.py)
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    full_name: str
+    reg_no: Optional[str] = None
+    email: str
+    phone: Optional[str] = None
+    student_type: Optional[str] = None
+    route_id: Optional[int] = None
+    route_name: Optional[str] = None
+    trip_type: Optional[str] = None
+    semester: Optional[str] = None
+    fee_id: Optional[int] = None
+    fee_amount: Optional[float] = None
+    fee_status: str = Field(default="not_enrolled")
+    receipts_count: int = Field(default=0)
+    last_receipt_status: Optional[str] = None
+    registered_at: Optional[datetime] = None
+
+
 # ==============================================================================
 # In-App Notification Schemas (Day 11)
 # ==============================================================================
@@ -335,4 +360,43 @@ class NotificationListOut(BaseModel):
     """
     unread_count: int = Field(default=0, description="Total number of unread notifications for notification bell badge")
     notifications: List[NotificationOut] = Field(default=[], description="Chronological listing of notifications, newest first")
+
+
+# ==============================================================================
+# Route Change Request Schemas
+# ==============================================================================
+
+class RouteChangeRequestCreate(BaseModel):
+    """Payload schema for student requesting a route transfer."""
+    requested_route_id: int = Field(..., description="Target route ID that the student wishes to switch to")
+    reason: str = Field(..., min_length=5, max_length=500, description="Explanation or justification for the route transfer")
+
+
+class RouteChangeRequestReview(BaseModel):
+    """Payload schema for Transport Admin approving or rejecting a route transfer."""
+    action: str = Field(..., description="'approve' or 'reject'")
+    admin_notes: Optional[str] = Field(None, max_length=500, description="Optional notes or feedback from administrator")
+
+
+class RouteChangeRequestOut(BaseModel):
+    """Serialized representation of a student route change request."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    student_name: str
+    student_reg_no: Optional[str] = None
+    student_email: str
+    student_type: Optional[str] = None
+    current_route_id: int
+    current_route_name: str
+    requested_route_id: int
+    requested_route_name: str
+    reason: str
+    status: str
+    admin_notes: Optional[str] = None
+    created_at: datetime
+    reviewed_at: Optional[datetime] = None
+    reviewer_name: Optional[str] = None
+
 

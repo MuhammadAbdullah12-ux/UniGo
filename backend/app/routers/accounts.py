@@ -22,6 +22,7 @@ from app.schemas import (
     ReceiptListItemOut,
     ReceiptDetailOut,
     StudentFeeHistoryOut,
+    StudentLedgerItemOut,
     UserOut,
     FeeOut,
     FeeReceiptOut,
@@ -468,6 +469,105 @@ def get_student_fee_history(
         fee=fee_out,
         receipts=receipts_out
     )
+
+
+# ==============================================================================
+# 5b. All Students Transport Ledger Directory
+# ==============================================================================
+
+@router.get("/students", response_model=List[StudentLedgerItemOut])
+def list_students_ledger(
+    q: Optional[str] = Query(None, description="Search keyword for student name, reg_no, or email"),
+    status: Optional[str] = Query(None, description="Filter by fee status: paid, pending, unpaid, rejected"),
+    route_id: Optional[int] = Query(None, description="Filter by transport route ID"),
+    student_type: Optional[str] = Query(None, description="Filter by student category: day_scholar, hostelite"),
+    db: Session = Depends(get_db),
+    current_officer: User = Depends(require_role("accounts", "admin"))
+):
+    """
+    Retrieves the complete student transport ledger directory for the Accounts Officer portal.
+    Lists all commuter students, their assigned routes, fee status, and receipts count.
+    Supports filtering by search query, fee payment status, route, and student category.
+    """
+    query = db.query(User).filter(User.role == "student")
+
+    if q:
+        search_pattern = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                User.full_name.ilike(search_pattern),
+                User.reg_no.ilike(search_pattern),
+                User.email.ilike(search_pattern)
+            )
+        )
+
+    if student_type:
+        query = query.filter(User.student_type == student_type.strip().lower())
+
+    students = query.order_by(User.full_name.asc()).all()
+
+    results = []
+    for s in students:
+        reg = db.query(Registration).filter(
+            Registration.user_id == s.id
+        ).order_by(desc(Registration.created_at)).first()
+
+        route_id_val = None
+        route_name_val = None
+        trip_type_val = None
+        semester_val = None
+        fee_id_val = None
+        fee_amount_val = None
+        fee_status_val = "not_enrolled"
+        receipts_count_val = 0
+        last_receipt_status_val = None
+        registered_at_val = None
+
+        if reg:
+            route_id_val = reg.route_id
+            route_name_val = reg.route.name if reg.route else None
+            trip_type_val = reg.trip_type
+            semester_val = reg.semester
+            registered_at_val = reg.created_at
+
+            if reg.fee:
+                fee_id_val = reg.fee.id
+                fee_amount_val = reg.fee.amount
+                fee_status_val = reg.fee.status
+
+                receipts = db.query(FeeReceipt).filter(FeeReceipt.fee_id == reg.fee.id).order_by(desc(FeeReceipt.uploaded_at)).all()
+                receipts_count_val = len(receipts)
+                if receipts:
+                    last_receipt_status_val = receipts[0].status
+
+        if route_id and route_id_val != route_id:
+            continue
+
+        if status and fee_status_val != status.strip().lower():
+            continue
+
+        results.append(
+            StudentLedgerItemOut(
+                id=s.id,
+                full_name=s.full_name,
+                reg_no=s.reg_no,
+                email=s.email,
+                phone=s.phone,
+                student_type=s.student_type,
+                route_id=route_id_val,
+                route_name=route_name_val,
+                trip_type=trip_type_val,
+                semester=semester_val,
+                fee_id=fee_id_val,
+                fee_amount=fee_amount_val,
+                fee_status=fee_status_val,
+                receipts_count=receipts_count_val,
+                last_receipt_status=last_receipt_status_val,
+                registered_at=registered_at_val
+            )
+        )
+
+    return results
 
 
 # ==============================================================================
