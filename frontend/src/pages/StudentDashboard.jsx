@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   Bus,
   CreditCard,
@@ -22,6 +23,7 @@ import {
   X,
   FileText,
   Eye,
+  ArrowRightLeft,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import API from "../api/client";
@@ -376,6 +378,34 @@ export const StudentDashboard = () => {
                     }}
                   >
                     🕒 <strong>Campus Departure Timing:</strong> Regular departures leave campus at 4:30 PM. Special Friday and examination departures leave at 2:00 PM.
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "0.875rem",
+                      paddingTop: "0.875rem",
+                      borderTop: "1px solid #f1f5f9",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.8125rem", color: "#64748b" }}>Need to switch routes?</span>
+                    <Link
+                      to="/student/change-route"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.3rem",
+                        fontSize: "0.8125rem",
+                        fontWeight: "700",
+                        color: "#2563eb",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <ArrowRightLeft size={13} />
+                      <span>Request Route Change &rarr;</span>
+                    </Link>
                   </div>
                 </div>
               </div>

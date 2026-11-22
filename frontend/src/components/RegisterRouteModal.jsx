@@ -17,27 +17,37 @@ export const RegisterRouteModal = ({ isOpen, onClose, onSuccess, studentType = "
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [existingRoute, setExistingRoute] = useState(null);
 
   const isDayScholar = studentType.toLowerCase() === "day_scholar";
 
-  // Fetch all active campus bus routes when modal opens
+  // Fetch all active campus bus routes & existing student fee status
   useEffect(() => {
     if (isOpen) {
       setError(null);
       setLoadingRoutes(true);
-      API.get("/routes")
-        .then((res) => {
-          const list = res.data || [];
-          setRoutes(list);
-          if (list.length > 0) {
-            // Pick first route with available seats, or default to first
-            const firstAvailable = list.find((r) => ((r.seats_total || 55) - (r.seats_taken || 0)) > 0);
-            setSelectedRouteId(String((firstAvailable || list[0]).id));
+      Promise.allSettled([
+        API.get("/routes"),
+        API.get("/fees/my"),
+      ])
+        .then(([routesRes, feeRes]) => {
+          if (routesRes.status === "fulfilled") {
+            const list = routesRes.value.data || [];
+            setRoutes(list);
+            if (list.length > 0) {
+              const firstAvailable = list.find((r) => ((r.seats_total || 55) - (r.seats_taken || 0)) > 0);
+              setSelectedRouteId(String((firstAvailable || list[0]).id));
+            }
+          }
+          if (feeRes.status === "fulfilled" && feeRes.value.data) {
+            setExistingRoute(feeRes.value.data.route_name || "a bus route");
+          } else {
+            setExistingRoute(null);
           }
         })
         .catch((err) => {
-          console.error("Failed to load transport routes:", err);
-          setError("Failed to load available bus routes. Please verify server connection.");
+          console.error("Failed to load transport data:", err);
+          setError("Failed to load transport data. Please check your connection.");
         })
         .finally(() => {
           setLoadingRoutes(false);
@@ -154,6 +164,28 @@ export const RegisterRouteModal = ({ isOpen, onClose, onSuccess, studentType = "
 
         {/* Content Body */}
         <form onSubmit={handleSubmit} style={{ padding: "1.5rem" }}>
+          {existingRoute && (
+            <div
+              style={{
+                backgroundColor: "#fef2f2",
+                border: "1px solid #fecaca",
+                color: "#991b1b",
+                padding: "0.875rem 1rem",
+                borderRadius: "0.5rem",
+                marginBottom: "1.25rem",
+                fontSize: "0.8125rem",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "0.625rem",
+              }}
+            >
+              <AlertCircle size={18} style={{ marginTop: "2px", flexShrink: 0, color: "#dc2626" }} />
+              <div>
+                <strong>Single-Route Enrollment Bound:</strong> You are already registered for <strong>{existingRoute}</strong>. University policy permits each student to hold exactly 1 bus route at a time. To transfer seats or switch your route, please contact the <strong>Transport Administrator</strong>.
+              </div>
+            </div>
+          )}
+
           {error && (
             <div
               style={{
@@ -386,20 +418,24 @@ export const RegisterRouteModal = ({ isOpen, onClose, onSuccess, studentType = "
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || loadingRoutes}
+                  disabled={submitting || loadingRoutes || !!existingRoute}
                   style={{
                     padding: "0.625rem 1.25rem",
                     border: "none",
-                    backgroundColor: "#1e3a8a",
+                    backgroundColor: existingRoute ? "#94a3b8" : "#1e3a8a",
                     borderRadius: "0.5rem",
                     fontSize: "0.875rem",
                     fontWeight: "600",
                     color: "#ffffff",
-                    cursor: submitting ? "not-allowed" : "pointer",
+                    cursor: (submitting || existingRoute) ? "not-allowed" : "pointer",
                     opacity: submitting ? 0.7 : 1,
                   }}
                 >
-                  {submitting ? "Generating Voucher..." : "Confirm & Generate Fee Slip"}
+                  {submitting
+                    ? "Generating Voucher..."
+                    : existingRoute
+                    ? "Enrollment Locked (Already Assigned)"
+                    : "Confirm & Generate Fee Slip"}
                 </button>
               </div>
             </>

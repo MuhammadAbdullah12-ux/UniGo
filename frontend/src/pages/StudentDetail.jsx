@@ -147,21 +147,24 @@ export const StudentDetail = () => {
       <div style={{ maxWidth: "1140px", margin: "1.5rem auto", padding: "0 1.5rem" }}>
         {/* Navigation Breadcrumb */}
         <div style={{ marginBottom: "1.25rem" }}>
-          <Link
-            to="/accounts/history"
+          <button
+            onClick={() => navigate(-1)}
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: "0.375rem",
               color: "#64748b",
-              textDecoration: "none",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
               fontSize: "0.875rem",
               fontWeight: "600",
+              padding: 0,
             }}
           >
             <ArrowLeft size={16} />
-            <span>Back to Audit History</span>
-          </Link>
+            <span>Back to Student Ledger</span>
+          </button>
         </div>
 
         {/* Global Loading / Error State */}
@@ -179,9 +182,9 @@ export const StudentDetail = () => {
             <AlertTriangle size={32} style={{ margin: "0 auto 0.75rem auto", color: "#dc2626" }} />
             <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.125rem", fontWeight: "700" }}>Student Record Not Found</h3>
             <p style={{ margin: "0 0 1rem 0", fontSize: "0.875rem" }}>{error}</p>
-            <Link to="/accounts/history" style={{ color: "#2563eb", fontWeight: "700", textDecoration: "underline" }}>
-              Return to Audit History
-            </Link>
+            <button onClick={() => navigate(-1)} style={{ color: "#2563eb", fontWeight: "700", textDecoration: "underline", background: "none", border: "none", cursor: "pointer" }}>
+              Return to Student Ledger
+            </button>
           </div>
         )}
 

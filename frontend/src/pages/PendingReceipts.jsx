@@ -227,6 +227,8 @@ export const PendingReceipts = () => {
           onReject={openRejectModal}
           onViewPdf={handleViewPdf}
           actionLoading={actionLoading}
+          emptyTitle="All Clear! No Pending Receipts"
+          emptyMessage="There are no student fee receipts waiting for accounts audit."
           title="All Pending Challans"
           subtitle="Showing all student fee submissions currently waiting for Accounts audit."
         />

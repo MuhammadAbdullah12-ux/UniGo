@@ -34,6 +34,8 @@ export const ReceiptsTable = ({
   showSearch = true,
   maxRows,
   pageSize = 10,
+  emptyTitle,
+  emptyMessage,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,12 +130,13 @@ export const ReceiptsTable = ({
         <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>
           <CheckCircle size={36} color="#059669" style={{ margin: "0 auto 0.75rem auto" }} />
           <h4 style={{ margin: "0 0 0.25rem 0", color: "#0f172a", fontSize: "1rem" }}>
-            All Clear! No Pending Receipts
+            {emptyTitle || (searchQuery ? "No Matching Receipts" : "No Receipts Found")}
           </h4>
           <p style={{ margin: 0, fontSize: "0.8125rem" }}>
-            {searchQuery
-              ? "No receipts match your search filter."
-              : "There are no student fee receipts waiting for accounts audit."}
+            {emptyMessage ||
+              (searchQuery
+                ? "No receipts match your search filter."
+                : "There are no student fee receipts in this category.")}
           </p>
         </div>
       ) : (

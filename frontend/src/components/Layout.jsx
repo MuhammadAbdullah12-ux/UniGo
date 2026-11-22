@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   ChevronRight,
   Bell,
+  ArrowRightLeft,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
@@ -112,9 +113,15 @@ export const Layout = ({ children }) => {
       },
       {
         name: "Route Enrollment",
-        path: "/student",
+        path: "/student/routes",
         icon: MapPin,
         description: "Browse bus routes & stops",
+      },
+      {
+        name: "Change Route",
+        path: "/student/change-route",
+        icon: ArrowRightLeft,
+        description: "Request official route transfer",
       },
       {
         name: "Notifications",
@@ -141,6 +148,24 @@ export const Layout = ({ children }) => {
       default:
         return "Student (Commuter)";
     }
+  };
+
+  const getBreadcrumbTitle = () => {
+    const path = location.pathname;
+    if (path.includes("notifications")) return "Notification Center";
+    if (path === "/accounts") return "Accounts Overview Dashboard";
+    if (path === "/accounts/receipts") return "Pending Receipts Verification Queue";
+    if (path.startsWith("/accounts/receipts/")) return "Verify Challan Slip";
+    if (path === "/accounts/history") return "Receipts Audit History Ledger";
+    if (path === "/accounts/students") return "Student Transport Ledger";
+    if (path.startsWith("/accounts/students/")) return "Student Financial Dossier & Audit Timeline";
+    if (path === "/admin/registrations") return "Master Passenger Registrations";
+    if (path === "/admin/schedules") return "Fleet Schedules & Friday Departures";
+    if (path.startsWith("/admin")) return "Transport Administration & Fleet Operations";
+    if (path === "/student/routes") return "Campus Bus Routes & Seat Enrollment";
+    if (path === "/student/change-route") return "Route Change & Transfer Request";
+    if (path.startsWith("/student")) return "Student Commute & Fee Voucher";
+    return user?.role === "accounts" ? "Accounts Officer Verification" : user?.role === "admin" ? "Transport Administration" : "Student Commute";
   };
 
   return (
@@ -328,13 +353,7 @@ export const Layout = ({ children }) => {
             <span style={{ fontSize: "0.8125rem", color: "#64748b", fontWeight: "500" }}>Portal</span>
             <ChevronRight size={14} color="#94a3b8" />
             <span style={{ fontSize: "0.8125rem", color: "#0f172a", fontWeight: "700" }}>
-              {location.pathname.includes("notifications")
-                ? "Notification Center"
-                : user?.role === "accounts"
-                ? "Accounts Officer Verification"
-                : user?.role === "admin"
-                ? "Transport Administration"
-                : "Student Commute"}
+              {getBreadcrumbTitle()}
             </span>
           </div>
 

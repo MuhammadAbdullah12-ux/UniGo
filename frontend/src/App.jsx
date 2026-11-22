@@ -13,12 +13,17 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import StudentDashboard from "./pages/StudentDashboard";
+import RouteEnrollment from "./pages/RouteEnrollment";
+import StudentRouteChange from "./pages/StudentRouteChange";
 import AccountsDashboard from "./pages/AccountsDashboard";
 import PendingReceipts from "./pages/PendingReceipts";
 import VerifyReceipt from "./pages/VerifyReceipt";
 import ReceiptsHistory from "./pages/ReceiptsHistory";
 import StudentDetail from "./pages/StudentDetail";
+import StudentLedger from "./pages/StudentLedger";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminRegistrations from "./pages/AdminRegistrations";
+import AdminSchedules from "./pages/AdminSchedules";
 import NotificationsPage from "./pages/NotificationsPage";
 
 // Smart Fallback Redirect: navigates logged-in users to their role portal, guests to /login
@@ -46,6 +51,8 @@ function App() {
           {/* ================================================================ */}
           <Route element={<ProtectedRoute allowedRoles={["student"]} />}>
             <Route path="/student" element={<StudentDashboard />} />
+            <Route path="/student/routes" element={<RouteEnrollment />} />
+            <Route path="/student/change-route" element={<StudentRouteChange />} />
           </Route>
 
           {/* ================================================================ */}
@@ -57,7 +64,7 @@ function App() {
             <Route path="/accounts/receipts/:id" element={<VerifyReceipt />} />
             <Route path="/accounts/history" element={<ReceiptsHistory />} />
             <Route path="/accounts/students/:id" element={<StudentDetail />} />
-            <Route path="/accounts/students" element={<Navigate to="/accounts/history" replace />} />
+            <Route path="/accounts/students" element={<StudentLedger />} />
           </Route>
 
           {/* ================================================================ */}
@@ -67,8 +74,8 @@ function App() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/routes" element={<AdminDashboard />} />
             <Route path="/admin/routes/:id" element={<AdminDashboard />} />
-            <Route path="/admin/registrations" element={<AdminDashboard />} />
-            <Route path="/admin/schedules" element={<AdminDashboard />} />
+            <Route path="/admin/registrations" element={<AdminRegistrations />} />
+            <Route path="/admin/schedules" element={<AdminSchedules />} />
           </Route>
 
           {/* ================================================================ */}

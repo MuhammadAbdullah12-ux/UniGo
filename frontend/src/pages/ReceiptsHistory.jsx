@@ -322,7 +322,7 @@ export const ReceiptsHistory = () => {
               <Search size={15} style={{ position: "absolute", left: "10px", top: "10px", color: "#9ca3af" }} />
               <input
                 type="text"
-                placeholder="Search roll no or student (400ms debounced)..."
+                placeholder="Search by student name or roll no..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 style={{
@@ -363,6 +363,8 @@ export const ReceiptsHistory = () => {
           onViewPdf={handleViewPdf}
           showSearch={false}
           pageSize={10}
+          emptyTitle="No Audit Records Found"
+          emptyMessage="No fee receipts match your selected filter criteria."
           title={
             statusTab === "all"
               ? "All Challan Records"
